@@ -1,0 +1,39 @@
+# Authentication, pairing, generated workers and machine-local operations
+.private/
+.local/
+**/connection.json
+**/auth.json
+**/bridge.json
+installation.json
+.env
+.env.*
+*.key
+*.crt
+*.pem
+*.p12
+*.pfx
+# Device/reader data and diagnostic captures
+/library/
+**/display-diagnostics/
+private-documents/
+private-indexes/
+backups/
+*.pdf
+*.epub
+*.[pP][dD][fF]
+*.[eE][pP][uU][bB]
+*.sdr/
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.db
+*.db-*
+# Build/runtime artifacts
+node_modules/
+.DS_Store
+._*
+__pycache__/
+*.pyc
+*.luac
+*.zip
+*.tar.gz
