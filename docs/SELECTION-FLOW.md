@@ -2,11 +2,11 @@
 
 The integration uses KOReader v2026.07.1's supported selection-menu hooks.
 
-The reading UI uses a compact note by default, retains the full chat through Expand, and adds separate document chats. See NOTE-UI.md for UI details and DOCUMENT-CHATS.md for conversation scope.
+The reading UI uses a compact note by default, retains the full chat through Expand, and adds separate document chats. See NOTE-UI.md for UI details and CHATS.md for conversation scope.
 
 ## Reading flow
 
-Version 0.5.1 adds the keyboard-visible scrolling fix, **Tools → Kobo Codex** to resume without reselecting a passage, and an optional **Resume Codex chat** gesture action. Ask/Explain now preserve KOReader's temporary selection when closing the selection menu. This does not automatically save an annotation; native Highlight still controls permanent marking.
+**Tools → Kobo Codex** resumes without reselecting a passage; **Resume Codex chat** is available as an optional gesture action. Ask/Explain preserve KOReader's temporary selection when closing the selection menu. This does not automatically save an annotation; native Highlight still controls permanent marking.
 
 1. Select a passage and open KOReader's normal selection menu. **Explain** submits a short preset explanation request; **Ask Codex** opens chat with an attachment and an editable question. Ask itself makes no bridge request.
 2. Tap the **Passage** button above the conversation to preview the exact quotation, physical PDF page reference when available, and whether it has been sent. **Detach** removes the attachment from future submission; it does not erase content already in chat history.
@@ -22,7 +22,7 @@ Only the selected text, an explicit question, and available numeric page provena
 
 The model is told to treat the quotation as source text rather than instructions and not to claim access to unseen pages. The bridge's existing prompt guard and tool/filesystem/network restrictions still apply. Submitted text is processed upstream by Codex, through the paired Mac; attachment preview and Ask composition are local.
 
-The chat shows the reader's question and a short page reference rather than repeating the full quotation/instruction wrapper. In 0.6.0 the bridge retains this bounded display text separately, so reopening a book shows concise history while the model receives the quotation. Each book has a separate conversation; switching books and returning resumes it while the Mac bridge stays running. Attachment state, drafts, ink and reader-return location remain local to the client instance. Restarting the bridge clears conversation histories. The previous 0.5.1 used one generic conversation.
+The chat shows the reader's question and a short page reference rather than repeating the full quotation/instruction wrapper. The bridge retains this bounded display text separately, so reopening a book shows concise history while the model receives the quotation. Each book has a separate conversation; switching books and returning resumes it while the Mac bridge stays running. Attachment state, drafts, ink and reader-return location remain local to the client instance. Restarting the bridge clears working conversations; explicitly saved archives remain available through Chat history. See [chats and archives](CHATS.md).
 
 ## Verification and remaining limits
 

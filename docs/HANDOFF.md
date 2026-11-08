@@ -15,13 +15,12 @@ automatic uploads or broader model permissions.
 - [Selection flow](SELECTION-FLOW.md): Explain/Ask, passage attachments, payload
   limits, and reader-location restoration.
 - [Reading note](NOTE-UI.md): compact/expanded layouts, scrolling, and highlights.
-- [Document chats](DOCUMENT-CHATS.md): opaque book identity, isolated threads,
-  and bridge/client compatibility.
-- [Chat archives](CHAT-ARCHIVES.md): source-level archive behavior, persistence,
-  resource limits, and deployment requirements.
+- [Chats and archives](CHATS.md): book identity, isolated conversations, persistence,
+  resource limits, and bridge/client compatibility.
+- [Security](SECURITY.md): trust boundaries, credential handling, privacy, and checks.
 - [Handwriting](../HANDWRITING.md): stylus input, local recognition, and privacy.
 - [Obsidian integration](OBSIDIAN.md): companion pairing, durable bridge queue,
-  explicit archive imports, delivery receipts, and the folder-setup fallback.
+  explicit archive imports, delivery receipts, and experimental folder tools.
 - [Roadmap](ROADMAP.md): proposed work and acceptance checks.
 
 ## Verification priorities
@@ -30,7 +29,7 @@ Local Node and Lua/LuaJIT checks exercise transport/security contracts,
 conversation isolation, asynchronous requests, draft/ink preservation,
 selection capture, and rendering bounds. Current test commands are in the
 [README](../README.md); security controls and additional verification procedures
-are described in the [technical README](PROTOTYPE_README.md).
+are described in the [security guide](SECURITY.md).
 
 These checks do not reproduce the physical e-ink controller. Verify selection
 order, reading-position restoration, keyboard-visible scrolling, rotation,

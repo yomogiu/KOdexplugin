@@ -29,8 +29,8 @@ This companion receives explicitly queued notes and creates them in its own vaul
 6. Choose **Send connection sample**. A note should appear in the selected folder.
 
 Obsidian 1.5.0 or newer is declared in the manifest. The code uses the supported
-Vault, settings, modal, and command APIs; acceptance in the actual desktop UI
-remains to be verified. Installing the ZIP requires no Node dependencies or build
+Vault, settings, modal, and command APIs. Desktop pairing and sample delivery
+have been verified; broader archive and lifecycle acceptance remains in progress. Installing the ZIP requires no Node dependencies or build
 step. Developers use esbuild to produce the single-file plugin entry point.
 
 For Finder installation, `npm run build:obsidian` prepares

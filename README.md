@@ -23,7 +23,8 @@ the Mac sends the questions you submit to Codex.
 - For handwriting, Apple’s command-line developer tools (`swiftc` and the macOS
   SDK). You can install them with `xcode-select --install`.
 
-No `npm install` is needed. The bridge uses Node’s built-in modules.
+The bridge uses Node’s built-in modules and needs no npm dependencies. Building
+the optional Obsidian plugin uses the development dependency shown below.
 
 ## Set up the Mac
 
@@ -91,66 +92,6 @@ If macOS asks about incoming network connections, allow the bridge’s Node
 executable on your private network. The Kobo needs to reach the Mac on TCP port
 **9443**. Do not forward this port through your router to the Internet.
 
-## Obsidian companion preview
-
-The Mac bridge stays central: Kobo questions go directly to the bridge and Codex.
-The optional Obsidian companion imports saved conversations into its own vault.
-When Obsidian is closed, notes wait in the bridge's private queue.
-
-```sh
-npm ci --prefix obsidian-kodex
-npm run package:obsidian
-npm run pair:obsidian
-```
-
-Install the generated `.local/releases/kodex-companion.zip` in your vault's
-plugins folder and enable KOdex Companion. Restart the bridge to enable its
-optional loopback listener, archiving working chats before restarting. In the
-plugin's settings, choose **Connect this vault** and enter the private pairing
-file path in Application Support printed by the pairing command. Keep that file
-outside the vault. Existing pre-0.1.2 pairings can be moved with
-`npm run pair:obsidian -- migrate` from the configured runtime; reload the updated
-plugin afterward. The plugin does not need access to Documents for pairing.
-Send a connection sample, then choose a saved conversation to import.
-
-This development preview supports macOS desktop and explicit archive imports;
-Kobo save actions for active chats/individual answers are still pending. It is
-not yet listed in the Obsidian community directory. See the
-[installation and recovery guide](obsidian-kodex/README.md) and
-[integration design](docs/OBSIDIAN.md).
-
-## Optional Markdown folder setup
-
-After creating the Mac pairing, run this from the same checkout, including for an
-existing installation:
-
-```sh
-npm run setup:obsidian
-```
-
-The interactive setup detects Obsidian without launching it and suggests known
-vaults. Choose a listed vault explicitly, enter an absolute folder path, or leave
-the path blank to use the Mac folder picker. You can also create a reading vault
-folder, select a plain Markdown folder without Obsidian, locate a custom app
-installation, or defer setup. Refresh discovery after installing Obsidian or
-registering a new vault.
-
-Setup previews the destination and configurable export subfolder (default
-`Reading/KOdex` for existing folders), then offers a sample Markdown note. A new
-reading folder contains `Books/`, `Conversations/`, `Attachments/`, and
-`Welcome.md`. Existing folders are never overwritten. To register a new folder
-with Obsidian, use **Manage Vaults → Open folder as vault**; setup offers to open
-the vault manager separately.
-
-Rerun the command to inspect availability, change the destination, write another
-sample, or disconnect while retaining existing notes. Settings are stored in
-the private `.private/obsidian.json`, separately from pairing and credentials.
-No bridge restart is needed for this setup command.
-
-**This fallback command configures a folder only.** The bridge does not consume
-its folder settings yet. Use the companion above for working archive import;
-direct folder export and Kobo save actions remain pending.
-
 ## Install and pair the Kobo
 
 1. Connect the Kobo by USB and choose **Connect** on the device.
@@ -198,17 +139,17 @@ a secret token; keep it private.
 - **Write a question:** tap **Expand**, then **Pen**, write on the pad, and tap
   **Send**. Handwriting is recognized on the Mac before the resulting text is
   submitted. **More → Preview handwriting** lets you review it first.
-- **Separate book chats (0.6.0):** each PDF or other book has its own conversation.
+- **Separate book chats:** each PDF or other book has its own conversation.
   Reopening it resumes that chat while the Mac bridge remains running.
-  In the expanded view, **More → New chat** clears only that book's chat.
+  In the expanded view, **More → New chat** archives that book's conversation
+  before starting a blank one.
 
-Version 0.7.0 requires matching Kobo plugin and Mac bridge updates. Both ends must
-be updated together. See [document chats](docs/DOCUMENT-CHATS.md).
+Update the Kobo plugin and Mac bridge together.
 
-**Archives (0.7.0):** New chat archives the current book conversation
+**Saved conversations:** New chat archives the current book conversation
 on the Mac. **Expand → More → Chat history** lists saved conversations for that
 book and lets you reopen one, saving the current chat first. Saved archives
-survive bridge restarts. See [chat archives](docs/CHAT-ARCHIVES.md).
+survive bridge restarts. See [chats and archives](docs/CHATS.md).
 
 Reading interactions open in a compact note. **Expand** opens the full controls
 and writing pad; **Compact** returns to the note. Drafts and unsent ink are not
@@ -216,7 +157,44 @@ saved across KOReader restarts.
 
 Working chat history is held in the Mac bridge's memory. Restarting the bridge
 clears working conversations; the saved book identity alone does not preserve
-them. In 0.7.0, explicitly archived conversations are retained on disk.
+them. Explicitly archived conversations are retained on disk.
+
+## Obsidian companion preview
+
+The Mac bridge stays central: Kobo questions go directly to the bridge and Codex.
+The optional Obsidian companion imports saved conversations into its own vault.
+When Obsidian is closed, notes wait in the bridge's private queue.
+
+```sh
+npm ci --prefix obsidian-kodex
+npm run package:obsidian
+npm run pair:obsidian
+```
+
+1. Extract `.local/releases/kodex-companion.zip` into your vault's
+   `.obsidian/plugins/` folder, so it contains `kodex-companion/main.js` and
+   `manifest.json`. In Finder, **Command-Shift-.** shows the hidden `.obsidian`
+   folder; create `plugins` inside it if needed.
+2. Reload Obsidian and enable **KOdex Companion** under **Settings → Community
+   plugins**. Archive working book chats, then restart the Mac bridge to enable
+   its optional loopback listener.
+3. In **Settings → KOdex Companion**, choose **Connect this vault** and enter the
+   Application Support pairing path printed by the command. Keep that file
+   outside the vault; Documents access is not required for pairing.
+4. Choose **Send connection sample**, then **Import a saved conversation** when
+   ready. Notes appear in **Reading → KOdex** by default. Change **Notes folder**
+   in the plugin's settings, or use **Open last imported note** in the command
+   palette to find a note received in the current session.
+
+Existing pre-0.1.2 pairings can be moved with
+`npm run pair:obsidian -- migrate` from the configured runtime; reload the updated
+plugin afterward.
+
+This development preview supports macOS desktop and explicit archive imports;
+Kobo save actions for active chats/individual answers are still pending. It is
+not yet listed in the Obsidian community directory. See the
+[installation and recovery guide](obsidian-kodex/README.md) and
+[integration design](docs/OBSIDIAN.md).
 
 ## Books and privacy
 
@@ -258,10 +236,10 @@ but you should still avoid sending secrets.
 
 For contributors, [architecture](docs/ARCHITECTURE.md),
 [handoff notes](docs/HANDOFF.md), and the [roadmap](docs/ROADMAP.md) contain
-implementation history and outstanding work. Detailed behavior is documented in
+the current implementation and outstanding work. Detailed behavior is documented in
 [selection flow](docs/SELECTION-FLOW.md), [reading note UI](docs/NOTE-UI.md), and
-[handwriting](HANDWRITING.md). The [original technical README](docs/PROTOTYPE_README.md)
-contains the fuller security model and transport checks.
+[handwriting](HANDWRITING.md). The [security guide](docs/SECURITY.md) explains
+current trust boundaries, credential storage, privacy limits, and additional checks.
 
 Run the Node checks with Node 22 (the companion load test builds its installable
 bundle, so install the development build dependency first):

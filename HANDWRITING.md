@@ -1,4 +1,4 @@
-# Handwriting prompts — version 0.3.5
+# Handwriting prompts
 
 Handwriting requires a supported stylus, KOReader 2026.07 or newer, and the Mac-local recognizer.
 
@@ -18,7 +18,7 @@ draft. **Cancel** during recognition prevents automatic sending and leaves a
 preview draft. Closing the chat also cancels the pending automatic send. If the
 draft changes during recognition, the combined text is kept for an explicit Send.
 
-The first release uses a fixed pen width and a stylus-only writing surface.
+The writing pad uses a fixed pen width and a stylus-only surface.
 Finger touches do not draw. Controls sit above the pad in Pen mode, away from
 the resting hand. Touch gestures are ignored during pen contact and for 600 ms
 after pen-up; lift your hand briefly before tapping a control. Use Undo/Clear
@@ -67,22 +67,15 @@ explained in README.md. These tests are not a universal zero-leakage guarantee.
 
 ## Verification
 
-- 18 Node tests passed, including stroke/size/schema limits and proof that the
-  recognition API does not call app-server.
-- Lua/LuaJIT tests cover the existing composer and the handwriting review flow:
-  one-tap local OCR/Send, optional preview, preserving drafts, clearing after an accepted Send, pen
-  hook cleanup, finger exclusion, bounds, rotation, and point limits.
-- The actual offline helper recognized synthetic HELLO pen strokes while under
-  the final no-network sandbox.
-- The kernel-level sandbox probe denied the OCR worker's localhost proxy, LAN,
-  direct Internet, outside synthetic files, and other-process inspection.
-- Actual LuaSec 1.3.2 sent pen vectors through the pinned TLS bridge, received a
-  HELLO draft, and passed the encrypted-wire check. Captured bytes contained no
-  plaintext token, authorization header, stroke JSON marker, or request line.
-- The official KOReader archive was hash-verified and checked for device support,
-  the required pen API, and absence of personal settings/history files.
+The Node tests cover stroke/size/schema limits and separation of recognition from
+model requests. Lua/LuaJIT contracts cover local OCR-on-Send, optional preview,
+draft/ink preservation, pen-hook cleanup, finger exclusion, rotation, and point bounds.
 
-These checks do not replace the on-device stylus/visual test after installation.
+Optional native Mac checks exercise synthetic HELLO strokes under the no-network
+recognizer sandbox. The sandbox probe tests denied file/process/network access;
+the live LuaSec test checks encrypted transport when its dependencies are available.
+These are separate from physical stylus accuracy, latency, palm behavior, and e-ink
+acceptance. See the [security guide](docs/SECURITY.md) for prerequisites and limits.
 
 ## Build and reproduce on a Mac
 
@@ -91,8 +84,9 @@ then restart the bridge. The helper uses the installed macOS SDK and frameworks.
 No Apple/OpenAI API key is needed for recognition.
 
 Run `node test/local-ocr.mjs` and `node test/macos-sandbox.mjs --no-network` with
-permission to create a real macOS sandbox. The ordinary suite is `npm test`,
-`lua test/ui_2025_test.lua`, and `lua test/transport_test.lua`.
+permission to create a real macOS sandbox. The ordinary checks are listed in the
+[README](README.md); the UI suite runs with LuaJIT because it exercises pinned
+native scrolling code.
 
 Sources: [official KOReader release](https://github.com/koreader/koreader/releases/tag/v2026.07.1),
 [official pen callback API](https://github.com/koreader/koreader/blob/v2026.07.1/frontend/device/input.lua),

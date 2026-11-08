@@ -50,10 +50,10 @@ This change prepares the storage convention only. It does not synchronize
 files, delete or replace existing books, start a watcher, index documents, or
 send any document content to Codex. No cloud-sync service is configured.
 
-The 0.6.0 per-book chat feature does not change this: its random conversation ID
+Per-book chats do not change this: its random conversation ID
 lives in KOReader's normal book settings. It does not download or copy the PDF
 to this repository, extract text, or populate `library/indexes/`. Only explicitly
-submitted selections provide book context. See [document chats](DOCUMENT-CHATS.md).
+submitted selections provide book context. See [chats and archives](CHATS.md).
 
 ## Future sync contract
 

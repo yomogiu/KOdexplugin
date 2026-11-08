@@ -81,9 +81,10 @@ Obsidian pauses local receipt while preserving notes and delivery receipts; it
 is not server-side credential revocation. Vault moves and pending-work reassignment
 need an explicit future migration flow and are not silently inferred.
 
-## Users without Obsidian
+## Experimental folder setup for developers
 
-The existing `npm run setup:obsidian` command remains a folder-setup fallback. It
+`npm run setup:obsidian` is an experimental developer command, not part of normal
+installation. It
 can locate Obsidian, suggest known vaults, select an ordinary Markdown folder,
 create a reading folder, and write a setup sample. A new folder is registered
 through Obsidian's own Open folder as vault flow when the user is ready.
@@ -152,7 +153,7 @@ Publisher signature verification and a writer proof against hostile concurrent
 directory swaps are deferred, not release blockers for this scope. The companion
 uses Obsidian's supported Vault API rather than a custom bridge vault writer.
 Do not claim that this confines arbitrary third-party plugins or same-user malware.
-See [security review](OBSIDIAN-SECURITY.md) for earlier setup findings and limits.
+See [security and privacy](SECURITY.md) for current controls and limits.
 
 ## Remaining work and acceptance
 

@@ -1,4 +1,4 @@
-# Compact reading note — version 0.5.1
+# Reading note and expanded chat
 
 Reading interactions use a compact note by default. Expand opens the full-screen view for handwriting and longer conversations.
 
@@ -24,7 +24,7 @@ Compact mode clears only its opaque frame and advertises that it does not cover 
 
 ## Local verification and device acceptance
 
-Version 0.5.0 had a compact-scrolling defect while the keyboard was visible. The direct-paint guard previously required the chat to be the topmost visible widget, which excluded its own native VirtualKeyboard. Version 0.5.1 allows a verified stack containing only the chat's own keyboard above the chat, with painted keyboard bounds and non-overlapping update regions. Other popups/key popups still defer paints; overlapping regions fall back to UIManager's ordinary stacked repaint. New regression checks invoke pinned native pan, swipe and scrollbar handlers with the keyboard topmost and verify both viewport movement and an actual queued regional repaint. Physical display behavior still requires device acceptance.
+The direct-paint guard allows a verified stack containing only the chat's own keyboard above the chat, with painted keyboard bounds and non-overlapping update regions. Other popups/key popups still defer paints; overlapping regions fall back to UIManager's ordinary stacked repaint. Regression checks invoke pinned native pan, swipe and scrollbar handlers with the keyboard topmost and verify both viewport movement and an actual queued regional repaint. Physical display behavior still requires device acceptance.
 
 The Lua/LuaJIT UI suite covers the reading default, focused native composer, empty/history sizing, complete-only output, shared Send/Stop, read-only history, Unicode role-based highlight ranges and clipped shading writes, answer-start positioning, idle polling, draft/cursor/ink preservation, expansion/collapse, frame-only painting and both orientations with keyboard and attachment combinations. Existing selection, background worker, transport and display diagnostic checks remain applicable.
 
