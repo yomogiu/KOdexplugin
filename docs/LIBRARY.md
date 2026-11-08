@@ -28,7 +28,7 @@ chmod 700 library library/pdfs library/kobo-state library/indexes
 | Location | PDF directory |
 | --- | --- |
 | Mac project | `library/pdfs/` |
-| Kobo connected by USB on this Mac | `/Volumes/KOBOeReader/Books/KOdex/` |
+| Kobo mounted by USB (typical macOS path) | `/Volumes/KOBOeReader/Books/KOdex/` |
 | Same directory as seen inside KOReader | `/mnt/onboard/Books/KOdex/` |
 
 `Books/KOdex/` is this project's chosen folder, not a required Kobo system path.
@@ -37,9 +37,6 @@ drive. KOReader's bundled Kobo device configuration defaults its file-browser
 home to `/mnt/onboard`; users can choose a different home folder. If you already
 maintain a preferred Books/Documents folder, use a KOdex subfolder there instead
 of moving your existing collection.
-
-The Kobo was not mounted when this layout was prepared, so its current custom
-home-folder setting was not inspected and no device folders were changed.
 
 ## Current use
 
@@ -52,6 +49,11 @@ your KOReader home folder.
 This change prepares the storage convention only. It does not synchronize
 files, delete or replace existing books, start a watcher, index documents, or
 send any document content to Codex. No cloud-sync service is configured.
+
+The 0.6.0 per-book chat feature does not change this: its random conversation ID
+lives in KOReader's normal book settings. It does not download or copy the PDF
+to this repository, extract text, or populate `library/indexes/`. Only explicitly
+submitted selections provide book context. See [document chats](DOCUMENT-CHATS.md).
 
 ## Future sync contract
 

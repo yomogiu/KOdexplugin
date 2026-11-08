@@ -11,8 +11,8 @@ the Mac sends the questions you submit to Codex.
 
 ## What you need
 
-- A Kobo with KOReader already installed. This project has been used with a
-  **Kobo Elipsa 2E and KOReader v2026.07.1**. Handwriting needs a compatible
+- A Kobo with KOReader already installed. Compatibility baseline:
+  **Kobo Elipsa 2E with KOReader v2026.07.1**. Handwriting needs a compatible
   stylus and KOReader **2026.07 or newer**.
 - A Mac with **Node.js 22**, **OpenSSL**, macOS `sandbox-exec`, and a native
   **Codex CLI** installed and available on your `PATH`. The CLI version used
@@ -91,6 +91,66 @@ If macOS asks about incoming network connections, allow the bridge’s Node
 executable on your private network. The Kobo needs to reach the Mac on TCP port
 **9443**. Do not forward this port through your router to the Internet.
 
+## Obsidian companion preview
+
+The Mac bridge stays central: Kobo questions go directly to the bridge and Codex.
+The optional Obsidian companion imports saved conversations into its own vault.
+When Obsidian is closed, notes wait in the bridge's private queue.
+
+```sh
+npm ci --prefix obsidian-kodex
+npm run package:obsidian
+npm run pair:obsidian
+```
+
+Install the generated `.local/releases/kodex-companion.zip` in your vault's
+plugins folder and enable KOdex Companion. Restart the bridge to enable its
+optional loopback listener, archiving working chats before restarting. In the
+plugin's settings, choose **Connect this vault** and enter the private pairing
+file path in Application Support printed by the pairing command. Keep that file
+outside the vault. Existing pre-0.1.2 pairings can be moved with
+`npm run pair:obsidian -- migrate` from the configured runtime; reload the updated
+plugin afterward. The plugin does not need access to Documents for pairing.
+Send a connection sample, then choose a saved conversation to import.
+
+This development preview supports macOS desktop and explicit archive imports;
+Kobo save actions for active chats/individual answers are still pending. It is
+not yet listed in the Obsidian community directory. See the
+[installation and recovery guide](obsidian-kodex/README.md) and
+[integration design](docs/OBSIDIAN.md).
+
+## Optional Markdown folder setup
+
+After creating the Mac pairing, run this from the same checkout, including for an
+existing installation:
+
+```sh
+npm run setup:obsidian
+```
+
+The interactive setup detects Obsidian without launching it and suggests known
+vaults. Choose a listed vault explicitly, enter an absolute folder path, or leave
+the path blank to use the Mac folder picker. You can also create a reading vault
+folder, select a plain Markdown folder without Obsidian, locate a custom app
+installation, or defer setup. Refresh discovery after installing Obsidian or
+registering a new vault.
+
+Setup previews the destination and configurable export subfolder (default
+`Reading/KOdex` for existing folders), then offers a sample Markdown note. A new
+reading folder contains `Books/`, `Conversations/`, `Attachments/`, and
+`Welcome.md`. Existing folders are never overwritten. To register a new folder
+with Obsidian, use **Manage Vaults → Open folder as vault**; setup offers to open
+the vault manager separately.
+
+Rerun the command to inspect availability, change the destination, write another
+sample, or disconnect while retaining existing notes. Settings are stored in
+the private `.private/obsidian.json`, separately from pairing and credentials.
+No bridge restart is needed for this setup command.
+
+**This fallback command configures a folder only.** The bridge does not consume
+its folder settings yet. Use the companion above for working archive import;
+direct folder export and Kobo save actions remain pending.
+
 ## Install and pair the Kobo
 
 1. Connect the Kobo by USB and choose **Connect** on the device.
@@ -119,12 +179,18 @@ a secret token; keep it private.
 
 ## Use it while reading
 
+- **Reopen chat without selecting text:** open KOReader's **Tools** tab (wrench)
+  and choose **Kobo Codex**. Your current conversation, draft and attachment
+  resume. **Resume Codex chat** is also available as a configurable gesture
+  action; no gesture binding is changed automatically.
 - **Explain a passage:** select text in your book and tap **Explain** in
   KOReader’s selection menu. This immediately submits the selected text with a
   preset explanation request.
 - **Ask about a passage:** select text and tap **Ask Codex**. Tap **Passage** to
   preview the attachment or detach it, type your question, then tap **Send**.
   Opening Ask or previewing a passage does not submit it.
+  Ask keeps KOReader's existing temporary selection visible. Use KOReader's
+  **Highlight** action when you want to save a permanent annotation.
 - **Continue the conversation:** type a follow-up below the answer. Replies
   appear when the turn finishes. Use **Stop** to interrupt a response.
 - **Return to the book:** tap **Read**. A question already submitted can finish
@@ -132,13 +198,25 @@ a secret token; keep it private.
 - **Write a question:** tap **Expand**, then **Pen**, write on the pad, and tap
   **Send**. Handwriting is recognized on the Mac before the resulting text is
   submitted. **More → Preview handwriting** lets you review it first.
-- **Start over:** in the expanded view, choose **More → New chat**. The bridge
-  uses one shared conversation; it does not automatically start a separate chat
-  for each book.
+- **Separate book chats (0.6.0):** each PDF or other book has its own conversation.
+  Reopening it resumes that chat while the Mac bridge remains running.
+  In the expanded view, **More → New chat** clears only that book's chat.
+
+Version 0.7.0 requires matching Kobo plugin and Mac bridge updates. Both ends must
+be updated together. See [document chats](docs/DOCUMENT-CHATS.md).
+
+**Archives (0.7.0):** New chat archives the current book conversation
+on the Mac. **Expand → More → Chat history** lists saved conversations for that
+book and lets you reopen one, saving the current chat first. Saved archives
+survive bridge restarts. See [chat archives](docs/CHAT-ARCHIVES.md).
 
 Reading interactions open in a compact note. **Expand** opens the full controls
 and writing pad; **Compact** returns to the note. Drafts and unsent ink are not
 saved across KOReader restarts.
+
+Working chat history is held in the Mac bridge's memory. Restarting the bridge
+clears working conversations; the saved book identity alone does not preserve
+them. In 0.7.0, explicitly archived conversations are retained on disk.
 
 ## Books and privacy
 
@@ -149,7 +227,8 @@ ignored by Git; create it yourself on a fresh checkout if you want to use it.
 
 The plugin sends the selected text, your question, and available numeric page
 references when you explicitly tap **Send** or **Explain**. It does not upload
-the whole book. Whole-document search, automatic PDF sync, scanned-page OCR,
+the whole book, download another PDF copy, or create a search index.
+Whole-document search, automatic PDF sync, scanned-page OCR,
 and handwriting annotations on PDF pages are not available.
 
 The Kobo-to-Mac connection uses pinned TLS and a device token. Handwriting
@@ -184,9 +263,11 @@ implementation history and outstanding work. Detailed behavior is documented in
 [handwriting](HANDWRITING.md). The [original technical README](docs/PROTOTYPE_README.md)
 contains the fuller security model and transport checks.
 
-Run the Node checks with Node 22:
+Run the Node checks with Node 22 (the companion load test builds its installable
+bundle, so install the development build dependency first):
 
 ```sh
+npm ci --prefix obsidian-kodex
 npm test
 ```
 

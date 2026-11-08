@@ -64,12 +64,9 @@ It is separate from your OpenAI credentials. Stop the bridge to revoke access;
 rotate the token and reinstall pairing if the device is lost. The bridge must
 remain on a private LAN; do not expose or forward its port to the Internet.
 
-## Installed setup
+## Running the bridge
 
-The local installation is ready. Its machine-specific addresses and executable
-paths live only in `.private/`, not in the shareable source bundle. Consult the
-local `TESTING.md` and `SECURITY-REPORT.md` for installation evidence and pending
-checks. They are intentionally excluded from the downloadable source ZIP.
+Machine-specific addresses, executable paths, and authentication belong in `.private/` and are excluded from the source. See the [README](../README.md) for setup.
 
 Use **sign-in.command** to sign into the separate profile, then restart using
 **start-bridge.command**. Sign-in also runs through the restricted tunnel and
@@ -81,10 +78,10 @@ On Kobo, open KOReader's main menu → **Kobo Codex**, tap the message box, then
 produces an explanation, not an attempted model turn. Closing the view stops
 polling. Drafts are not saved across KOReader restarts.
 
-## Fresh setup on another Mac
+## Fresh setup
 
 Requirements: tested Node.js **22**, OpenSSL, macOS `sandbox-exec`, and an installed
-native Codex CLI. No `npm install` is needed. The installed CLI used for testing
+native Codex CLI. No `npm install` is needed. The CLI version used for compatibility testing
 was 0.160.0. This source resolves its native binary instead of executing a shell
 or Node wrapper inside the Codex sandbox.
 

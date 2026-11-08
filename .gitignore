@@ -30,6 +30,7 @@ backups/
 *.db-*
 # Build/runtime artifacts
 node_modules/
+/outputs/
 .DS_Store
 ._*
 __pycache__/

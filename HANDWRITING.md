@@ -1,12 +1,10 @@
 # Handwriting prompts — version 0.3.5
 
-Installed diagnostic update: plugin version 0.3.5 and KOReader v2026.07.1.
-The Mac recognizer and encrypted recognition path are tested. Eject and restart
-KOReader after installation for the physical stylus/visual check.
+Handwriting requires a supported stylus, KOReader 2026.07 or newer, and the Mac-local recognizer.
 
 ## Workflow
 
-1. Open Kobo Codex and tap **Pen**.
+1. Open Kobo Codex, tap **Expand** if needed, then **Pen**.
 2. Write on the pad, then tap **Send**.
 3. The Mac recognizes the writing locally and the plugin sends the text through
    the existing sensitive-text guard. The pad clears only after acceptance.
@@ -31,18 +29,16 @@ need checking on the physical device. English and French are currently configure
 
 ## Required KOReader update
 
-Our confirmed device build, v2025.04, has no supported stylus callback API.
+KOReader v2025.04 has no supported stylus callback API.
 The official Kobo v2026.07.1 package contains the pen API and Elipsa 2E support.
-The Kobo 4.x package was downloaded and matched the release's SHA-256 digest:
+The Kobo 4.x release archive has SHA-256 digest:
 
 `0f36a62ce73b12516f969e4ad7862cc06920afb03c7bd4db29a0d990bdd84b2f`
 
 This is an application update, not a Kobo firmware or launcher change. Before
-installation, back up the current KOReader folder. The prepared updater retains
-personal settings, history, custom defaults, and pairing, and copies only the
-verified official application files plus our plugin. No third-party pen plugin
-or replacement input.lua is installed. The official update includes the new
-input implementation as part of KOReader itself.
+installation, back up the current KOReader folder. Preserve settings, history,
+custom defaults, and pairing during an upgrade.
+Use the official KOReader package; the pen API is part of KOReader itself.
 
 ## Local recognition and privacy
 
@@ -90,8 +86,7 @@ These checks do not replace the on-device stylus/visual test after installation.
 
 ## Build and reproduce on a Mac
 
-The current Mac helper is already built, and the bridge recognizes the local
-API. On another configured Mac, use Node 22 to run `node build-recognizer.mjs`,
+After Mac setup, use Node 22 to run `node build-recognizer.mjs`,
 then restart the bridge. The helper uses the installed macOS SDK and frameworks.
 No Apple/OpenAI API key is needed for recognition.
 
@@ -103,31 +98,5 @@ Sources: [official KOReader release](https://github.com/koreader/koreader/releas
 [official pen callback API](https://github.com/koreader/koreader/blob/v2026.07.1/frontend/device/input.lua),
 and [Apple Vision text recognition](https://developer.apple.com/documentation/vision/vnrecognizetextrequest).
 
-Installation verification: 1,044 official application files and five plugin
-source files checked. Personal settings, history, custom defaults, and pairing
-were preserved. A fresh private pre-update backup is recorded locally.
-
-Version 0.3.3 handles screen-size changes while the same chat remains open.
-It rebuilds all controls together on the next UI tick and requests a full
-refresh. Draft, cursor, ink, and scroll position are retained. A photo of the
-reported right-edge bar motivated this repair, but on-device confirmation
-is still needed; a solid bar can have other causes.
-
-Version 0.3.4 addresses the reported Pen-entry trigger: pressing Pen defers
-the mode switch until button feedback completes. After the first Pen frame, a
-follow-up redraw waits for the previous display update and repaints the whole
-chat without clearing handwriting. This follows the observed Clear-pad recovery
-without invoking Clear. Active strokes/popups defer the redraw; stale layouts
-and closed chats cancel it. The additional redraw occurs once per Pen layout,
-not during every stroke. Physical confirmation of the black-bar repair is pending.
-
-Version 0.3.5 gathers local display evidence when Clear pad is tapped. When
-the bar is visible, tap Clear pad once, then reconnect by USB so the control-row
-crops and dimensions can be inspected. Chat, draft and ink regions are excluded
-from images; ambiguous bounds cause image capture to be skipped. No networking
-is involved. The black-bar cause remains unresolved.
-
-Additional 0.3.5 repair after the report that writing also triggers the bar:
-regional stroke updates now write only the affected pad pixels, without
-repainting unrelated controls. Full chat paints request full-screen refresh
-coverage. Transport, local recognition, pairing, and prompt handling are unchanged.
+For the unresolved right-edge artifact, rendering repairs, and controls-only
+diagnostic captures, see [display troubleshooting](docs/DISPLAY-ISSUE.md).

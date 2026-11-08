@@ -41,4 +41,23 @@ for _, payload in ipairs({
     reset(payload); assert(not pcall(transport.request, config, "GET", "/v1/state")); assert(closed)
 end
 reset(); assert(not pcall(transport.request, config, "POST", "/command/exec", "{}")); assert(sent == "")
+local id=string.rep('a',32)
+for _,operation in ipairs({'state','prompt','stop','reset','history','reopen'})do
+    reset()
+    local path='/v1/documents/'..id..'/'..operation
+    local method=(operation=='state'or operation=='history')and'GET'or'POST'
+    assert(transport.request(config,method,path,'{}').status==200)
+    assert(sent:find(method..' '..path..' HTTP/1.1',1,true)and closed)
+end
+for _,path in ipairs({'/v1/documents/'..id..'/recognize','/v1/documents/'..id..'/state?file=book',
+    '/v1/documents/'..id..'a/state','/v1/documents/'..string.rep('A',32)..'/state',
+    '/v1/documents/../../book/state','/v1/documents/'..id..'/exec'})do
+    reset();assert(not pcall(transport.request,config,'GET',path));assert(sent==''and not closed)
+end
+for _,bad in ipairs({{'POST','/v1/documents/'..id..'/history'},{'GET','/v1/documents/'..id..'/reopen'},{'GET','/v1/history'},{'POST','/v1/reopen'}})do
+    reset();assert(not pcall(transport.request,config,bad[1],bad[2],'{}'));assert(sent=='')
+end
+reset();pin=string.rep('c',64)
+assert(not pcall(transport.request,config,'POST','/v1/documents/'..id..'/prompt','{}')and sent==''and closed)
+pin=config.fingerprint
 print("Lua transport checks passed: pin-before-token, partial sends, bounds, no redirects, endpoint allowlist")

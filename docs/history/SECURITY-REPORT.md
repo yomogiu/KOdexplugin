@@ -1,11 +1,11 @@
 # Kobo Codex security test report
 
-Date: 2026-11-07. Version: 0.2.0. Scope: our plugin, bridge, local app-server,
+Historical baseline: version 0.2.0. Scope: our plugin, bridge, local app-server,
 and upstream connection restrictions. This is a first-party implementation
 review with executable checks, not independent certification or a zero-leakage
 claim.
 
-## Changes installed
+## Security controls
 
 - Added a mandatory macOS process sandbox around Codex. Direct network access,
   LAN access, unrelated loopback ports, outside file contents, subprocesses, and
@@ -26,12 +26,9 @@ claim.
   complete detector of arbitrary sensitive information or deliberate obfuscation.
 - Kept certificate pinning before any HTTP token or prompt is sent. Restricted
   the Kobo's TLS 1.2 ciphers to forward-secret AES-GCM suites.
-- Rotated the device token, restricted private-profile permissions without
-  following executable symlinks, and installed/hash-checked the new pairing and
-  transport. Removed only our plugin's macOS metadata sidecars.
-- Removed actual machine names, private addresses and personal filesystem paths
-  from the shareable source archive. Pairing secrets and local installation
-  reports are excluded. Original KOReader/launcher backup remains locally private.
+- Restricted private-profile permissions without following executable symlinks.
+  Pairing secrets, machine-specific settings, and private backups are excluded
+  from the source.
 - Pinned the launcher to the verified Node 22 runtime recorded privately. A newer
   PATH-selected runtime stalled in a real handshake test; no security check was
   disabled to accommodate it.
@@ -63,7 +60,7 @@ Lua transport on the Mac against the live bridge, not a mocked TLS implementatio
 The proxy also completed a public-CA-verified TLS 1.3 handshake to an allowed
 OpenAI host without sending account credentials or a model prompt. The hardened
 native Codex device-login flow reached the official authentication service through
-the restricted proxy; browser sign-in remains pending.
+the restricted proxy.
 
 Lua transport unit checks and KOReader v2025.04 UI-contract regression checks also
 passed. The latter validate the older text-style and scrolling API contracts;
@@ -71,16 +68,9 @@ they are not a substitute for exercising the Kobo screen.
 
 ## Pending and residual limits
 
-Update: the separate profile subsequently authenticated successfully. After
-restarting the unchanged hardened bridge, a real test prompt returned exactly
-`Kobo connection test successful.` The model reply completed through the existing
-TLS, local tunnel, and process sandbox. No ordinary Codex credentials were copied.
-The Kobo's earlier sign-in error confirmed its plugin could submit a request to
-the bridge before the restart; the user can now retry the device prompt.
-
-The installed Kobo interface has not been operated during these host-side tests.
-While mounted over USB it cannot run the normal KOReader Wi-Fi UI. Ejecting and
-opening the plugin is still required for the final device test.
+Host-side authentication and model-response checks do not establish on-device
+UI behavior. Device acceptance requires safely ejecting the Kobo and running
+the plugin with Wi-Fi enabled; see the [testing guide](TESTING.md).
 
 These checks do not conceal your public IP, allowed DNS destinations, connection
 metadata, or the account/model data intentionally sent to OpenAI. Account-side
@@ -106,8 +96,7 @@ bundle and were not installed globally or onto Kobo.
 
 ## Handwriting update 0.3.0
 
-Installed the checksum-verified official KOReader v2026.07.1 and our own pen
-pad. Only bounded vector strokes are transmitted over pinned TLS; no screenshot
+The handwriting path uses KOReader v2026.07.1's pen API and the plugin's vector pad. Only bounded vector strokes are transmitted over pinned TLS; no screenshot
 of a book or conversation is captured. A separate no-network Apple Vision
 helper recognizes them locally and returns an editable draft. No Codex call
 occurs until Send, and the existing sensitive-text guard applies then.

@@ -1,43 +1,51 @@
-# Project handoff — 2026-11-07
+# Contributor handoff
 
-## User's objective
+## Project scope
 
-Build a private Kobo Elipsa 2E productivity/reading companion using KOReader and Codex app-server. The user distrusts opaque pen plugins, wants their own reviewable code, local OCR, secure transport, no secret/private-network leakage, and a usable stylus interface.
+KOdexplugin is a KOReader reading companion with a Mac bridge, a dedicated
+restricted Codex profile, and local handwriting recognition. Questions and
+selected passages are submitted explicitly. Whole-book import, indexing,
+retrieval, and PDF ink remain separate work; this document does not authorize
+automatic uploads or broader model permissions.
 
-The current request is to consolidate this work into KOdexplugin. A PDF-integrated assistant is the desired next project direction, not authorization to silently import books, upload documents, or expand Codex's permissions.
+## Implementation guide
 
-## Implemented and exercised
+- [Architecture](ARCHITECTURE.md): bridge, sandbox, transport, background workers,
+  rendering, and proposed document retrieval.
+- [Selection flow](SELECTION-FLOW.md): Explain/Ask, passage attachments, payload
+  limits, and reader-location restoration.
+- [Reading note](NOTE-UI.md): compact/expanded layouts, scrolling, and highlights.
+- [Document chats](DOCUMENT-CHATS.md): opaque book identity, isolated threads,
+  and bridge/client compatibility.
+- [Chat archives](CHAT-ARCHIVES.md): source-level archive behavior, persistence,
+  resource limits, and deployment requirements.
+- [Handwriting](../HANDWRITING.md): stylus input, local recognition, and privacy.
+- [Obsidian integration](OBSIDIAN.md): companion pairing, durable bridge queue,
+  explicit archive imports, delivery receipts, and the folder-setup fallback.
+- [Roadmap](ROADMAP.md): proposed work and acceptance checks.
 
-- Dependency-free Node 22 HTTPS bridge to a dedicated Codex app-server over stdio.
-- Kobo LuaSec transport checks an exact SHA-256 certificate pin before transmitting the bearer token or HTTP application data. No plaintext fallback or redirects.
-- Dedicated computer-side Codex authentication. The Kobo does not sign into OpenAI and holds only its device pairing.
-- Persistent chat/composer; sending/reply updates preserve draft/editor state. Reply polling and Stop.
-- Official KOReader update from v2025.04 to v2026.07.1, with settings/history/pairing preserved and private rollback backups.
-- Stylus-only vector pad, Undo/Clear, rotation/bounds limits, hook restoration, palm-touch suppression, controls above the writing area.
-- Send triggers local handwriting recognition on the Mac and then submits only text. Optional preview, cancel, duplicate suppression, retry IDs, draft/ink preservation on errors.
-- Apple Vision accurate revision-3 English/French CPU OCR in a separate no-network sandbox. Vector-only input; in-memory rasterization; no book/chat screenshots in the OCR path.
-- Version 0.3.5: bounded pad-only live stroke blits, matching whole-screen refresh for whole-chat painting, and local display diagnostics.
+## Verification priorities
 
-## Current unresolved issue
+Local Node and Lua/LuaJIT checks exercise transport/security contracts,
+conversation isolation, asynchronous requests, draft/ink preservation,
+selection capture, and rendering bounds. Historical host-side security evidence
+is summarized in [the security report](history/SECURITY-REPORT.md).
 
-An intermittent black/blank bar covers the right side of controls. The user reproduced it by tapping the Pen button and intermittently while writing; Clear pad restores the section. A user photo showed More/Close and Clear-pad controls obscured at the same edge. Earlier refresh, width, rotation and delayed-settle changes did not eliminate it.
+These checks do not reproduce the physical e-ink controller. Verify selection
+order, reading-position restoration, keyboard-visible scrolling, rotation,
+handwriting accuracy/latency, and conversation switching on hardware. The
+[right-edge display defect](DISPLAY-ISSUE.md) remains unresolved; controls-only
+diagnostics are available. Do not claim that source checks establish a hardware
+fix.
 
-Version 0.3.5 fixed a verified paint/refresh mismatch: a tiny stroke refresh previously dirtied and repainted the entire chat. The repair has been installed and source/hash-verified, but the user has not confirmed its hardware outcome. Do not report this defect as resolved.
+## Deployment and private state
 
-If it returns, the instructed sequence is: while visible, tap Clear pad once, reconnect USB, inspect `kobocodex.koplugin/display-diagnostics/`. Captures include controls only, never chat/draft/ink; invalid or overlapping bounds are refused. See DISPLAY-ISSUE.md.
+Deploy compatible bridge and plugin versions together. Follow each feature's
+deployment notes, preserve pairing and native book settings, and account for
+in-memory conversations before restarting the bridge. Restart KOReader after
+replacing plugin files.
 
-## Proposed next feature
-
-Select PDF text and invoke Explain selection or Ask Codex; preserve reading position, attach page references, and continue a conversation with selected passages. Then add explicit Mac-local PDF import, per-page extraction/indexing and local retrieval across the entire document. The bridge supplies retrieved text to Codex; Codex does not receive general filesystem tools. A separate whole-document summarization workflow would traverse every section. Scanned-PDF OCR is separate from the existing handwriting OCR.
-
-## Important operational facts
-
-The bridge has stopped during development; `transport.lua:22: connection refused` was resolved by restarting the original configured launcher and verifying pinned TLS/authenticated state. This error is distinct from the display bar. Keep the Mac awake and use the configured private LAN connection. No new device sign-in is required simply because the bridge restarted.
-
-No runtime secrets were copied into this project. The active private profile, certificates, token and rollback archives remain in the original workspace. `.local/OPERATIONS.md` gives local pointers; never commit it. Historical installers depend on the original workspace layout and must be adapted before reuse.
-
-## Evidence and limits
-
-Node security/bridge/recognition suites, real LuaSec ciphertext and pin-before-token tests, local synthetic OCR, and actual macOS sandbox probes were run during development. Dates/version-specific reports are preserved in docs/history. Recent Lua/LuaJIT contracts cover OCR-on-Send, errors/cancel/close, keyboard and live rotation, pen-entry timing, paint/refresh bounds, and diagnostic crop exclusions. These do not reproduce the e-ink controller or constitute independent security certification.
-
-The user confirmed conversational use works, but handwriting accuracy/latency and display reliability still require device testing. No PDF reading integration or annotation mode has been built.
+Private profiles, certificates, pairing tokens, transcripts, diagnostic images,
+and local operational notes must stay out of Git. A source checkout does not
+include a configured runtime. Historical scripts in `legacy-work/installers/`
+depend on an older workspace layout and must be reviewed before reuse.

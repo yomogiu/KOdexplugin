@@ -1,11 +1,13 @@
 import { readFileSync, mkdirSync, mkdtempSync, writeFileSync, rmSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { createServer } from 'node:https';
-import { AppServer, Chat, handler } from './bridge.mjs';
+import { AppServer, ChatRegistry, handler } from './bridge.mjs';
+import { DiskArchives } from './archives.mjs';
 import { privateFile, privateDirectory, sandboxProfile, resolveNativeBinary, validateBind } from './security.mjs';
 import { createEgress } from './egress.mjs';
 import { hostname } from 'node:os';
 import { LocalRecognizer } from './recognition.mjs';
+import { startCompanion } from './companion.mjs';
 
 process.umask(0o077);
 if (process.versions.node.split('.')[0] !== '22' || process.env.NODE_OPTIONS || process.env.SSLKEYLOGFILE ||
@@ -17,6 +19,8 @@ const config = JSON.parse(readFileSync(privateFile(join(root, 'bridge.json'))));
 validateBind(config);
 privateFile(join(root, 'server.key')); privateFile(join(root, 'codex-home/config.toml'));
 const codexHome = privateDirectory(join(root, 'codex-home'));
+const archives = new DiskArchives(join(root, 'chat-archives'));
+await archives.prepare();
 const executable = resolveNativeBinary(config.codexBinary || process.env.CODEX_BIN);
 // A generic temporary workspace avoids putting account names or project paths
 // in the model's environment context. It contains no user documents.
@@ -31,7 +35,7 @@ try { await rpc.initialize(); } catch {
   rpc.close(); egress.close(); rmSync(runtime, { recursive: true, force: true });
   throw new Error('Restricted Codex startup failed. No unrestricted fallback is permitted.');
 }
-const chat = new Chat(rpc, workspace, [config.token, config.host, hostname(), root]);
+const chat = new ChatRegistry(rpc, workspace, [config.token, config.host, hostname(), root], { archives });
 const ocrBinary = join(root, 'ocr-worker');
 if (existsSync(ocrBinary)) privateFile(ocrBinary);
 const recognizer = existsSync(ocrBinary) ? new LocalRecognizer(ocrBinary) : undefined;
@@ -44,10 +48,16 @@ const server = createServer({ key: readFileSync(join(root, 'server.key')), cert:
 server.maxConnections = 8;
 server.setTimeout(35000, socket => socket.destroy());
 server.on('tlsClientError', () => {});
+let companion;
+try {
+  companion = await startCompanion(root, archives);
+  companion?.on('error', () => { console.error('Obsidian companion listener stopped; reading chat remains available.'); companion.close(); });
+} catch { console.error('Obsidian companion unavailable; reading chat remains available.'); }
 let closing = false;
 function close() {
   if (closing) return; closing = true;
   rpc.close(); egress.close(); recognizer?.close(); server.closeAllConnections(); server.close();
+  companion?.closeAllConnections(); companion?.close();
   rmSync(runtime, { recursive: true, force: true });
 }
 server.on('error', () => { console.error('Bridge listener failed.'); close(); process.exitCode = 1; });

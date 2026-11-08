@@ -9,7 +9,13 @@ function Transport.request(config, method, path, body)
     assert(type(config.port) == "number" and config.port % 1 == 0 and config.port > 0 and config.port < 65536, "Invalid port")
     assert(type(config.token) == "string" and #config.token == 64 and config.token:match("^[a-f0-9]+$"), "Invalid device token")
     assert(type(config.fingerprint) == "string" and #config.fingerprint == 64 and config.fingerprint:match("^[a-f0-9]+$"), "Invalid certificate pin")
-    assert((method == "GET" and (path == "/v1/state" or path == "/v1/recognize")) or
+    local id,operation
+    if type(path)=="string" then id,operation=path:match("^/v1/documents/([a-f0-9]+)/([a-z]+)$") end
+    -- Do not use a generic path/URL API. Scoped routes have an exact opaque ID
+    -- and explicit chat operations; arbitrary paths and OCR stay barred.
+    local scoped=id and #id==32 and ((method=="GET" and (operation=="state" or operation=="history")) or
+        (method=="POST" and (operation=="prompt" or operation=="stop" or operation=="reset" or operation=="reopen")))
+    assert(scoped or (method == "GET" and (path == "/v1/state" or path == "/v1/recognize")) or
         (method == "POST" and (path == "/v1/prompt" or path == "/v1/stop" or path == "/v1/reset" or path == "/v1/recognize")), "Invalid operation")
     body = body or ""
     assert(#body <= (path == "/v1/recognize" and 800000 or 70000), "Request is too large")

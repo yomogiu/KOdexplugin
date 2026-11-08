@@ -1,0 +1,9 @@
+{
+  "id": "kodex-companion",
+  "name": "KOdex Companion",
+  "version": "0.1.2",
+  "minAppVersion": "1.5.0",
+  "description": "Receive explicitly saved KOReader conversations from your local KOdex Mac bridge.",
+  "author": "KOdex contributors",
+  "isDesktopOnly": true
+}

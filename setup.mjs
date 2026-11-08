@@ -43,3 +43,5 @@ console.log('Sign into the separate profile:');
 console.log(`CODEX_HOME="${join(root, 'codex-home')}" codex login`);
 console.log('Then: npm start');
 console.log('Copy .private/connection.json by USB into plugins/kobocodex.koplugin/.');
+console.log('Optional Obsidian companion: npm run pair:obsidian (see README for plugin installation).');
+console.log('Optional Markdown folder setup: npm run setup:obsidian (folder delivery is not yet implemented).');
