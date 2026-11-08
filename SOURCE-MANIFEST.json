@@ -127,14 +127,6 @@
       "sha256": "f39900e87c32394f1e8bd7fd82cf3ff06e99593bd75762ab0f80c6b1fd140657"
     },
     {
-      "path": "docs/history/TESTING.md",
-      "sha256": "4094e127fbd341b403ce29bb94b62775dc413bb9e062ae046c86ff9623a46427"
-    },
-    {
-      "path": "docs/history/SECURITY-REPORT.md",
-      "sha256": "e585e7a68eba38421570f0675fb8b89df8e328e3472852c71547e84093f8c087"
-    },
-    {
       "path": "reference/app-server-schema/ApplyPatchApprovalParams.json",
       "sha256": "179d91081c3c84d0f79fc544a3d6d423f280c0f9d93512cdd0344c80e09b99a3"
     },
@@ -1477,26 +1469,6 @@
     {
       "path": "reference/koreader-v2026.07.1/ui/widget/verticalgroup.lua",
       "sha256": "04d56ba983834133c5d285c2059cb5b8943fc3e76b68789e24450b08a2483991"
-    },
-    {
-      "path": "legacy-work/installers/install-display-diagnostic-update.py",
-      "sha256": "726e8f66ff15b8a0ca39b9cb31911805ee67d3ddb674506e3e67fcbc35f55405"
-    },
-    {
-      "path": "legacy-work/installers/install-palm-update.py",
-      "sha256": "174f2bee5f914d34d177d70d38c7cc37ab215bf1f4f4cef4943374334af0ff33"
-    },
-    {
-      "path": "legacy-work/installers/install-pen-redraw-update.py",
-      "sha256": "1ab2216774c998a83f86691287d823cec3d9e47a4df5213c4dc3c4fbd1c00b32"
-    },
-    {
-      "path": "legacy-work/installers/install-resize-update.py",
-      "sha256": "d08f22650f6e688a66a32720724e6772b9e8aca0a560831ba7bdf939cd811e42"
-    },
-    {
-      "path": "legacy-work/installers/install_koreader_update.py",
-      "sha256": "1f40468538fb2ac316d93cc5e278ff27bb78f739916f510fb9b834d5ab37481b"
     }
   ]
 }

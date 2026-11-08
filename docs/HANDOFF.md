@@ -28,8 +28,9 @@ automatic uploads or broader model permissions.
 
 Local Node and Lua/LuaJIT checks exercise transport/security contracts,
 conversation isolation, asynchronous requests, draft/ink preservation,
-selection capture, and rendering bounds. Historical host-side security evidence
-is summarized in [the security report](history/SECURITY-REPORT.md).
+selection capture, and rendering bounds. Current test commands are in the
+[README](../README.md); security controls and additional verification procedures
+are described in the [technical README](PROTOTYPE_README.md).
 
 These checks do not reproduce the physical e-ink controller. Verify selection
 order, reading-position restoration, keyboard-visible scrolling, rotation,
@@ -47,5 +48,5 @@ replacing plugin files.
 
 Private profiles, certificates, pairing tokens, transcripts, diagnostic images,
 and local operational notes must stay out of Git. A source checkout does not
-include a configured runtime. Historical scripts in `legacy-work/installers/`
-depend on an older workspace layout and must be reviewed before reuse.
+include a configured runtime. Follow the current installation instructions in
+the [README](../README.md) and the feature-specific guides above.

@@ -1,10 +1,14 @@
 # Source provenance
 
-This repository originated from the Kobo Codex prototype. The Python-generated SOURCE-MANIFEST.json records SHA-256 hashes for byte-preserved source/reference/history files. The shareable ZIP's explicit file allowlist seeded the transfer; additional test/status documents were included separately.
+This repository originated from the Kobo Codex prototype. SOURCE-MANIFEST.json
+and TRANSFER-MANIFEST.json retain original import hashes for source and reference
+files still present in the repository. They are historical provenance records,
+not current release checksums. Entries for removed development artifacts have
+been pruned; Git history preserves the original inventories and files. The
+shareable ZIP's explicit file allowlist seeded the transfer; additional test
+documents were included separately.
 
 `reference/app-server-schema/` contains generated schemas used to verify app-server interfaces. `reference/koreader-v2026.07.1/` contains selected unmodified upstream sources extracted from the official Kobo release used for the device update, with the upstream COPYING file. These are reference material, not replacement KOReader core modules. Official archive SHA-256: `0f36a62ce73b12516f969e4ad7862cc06920afb03c7bd4db29a0d990bdd84b2f`.
-
-Historical installer scripts depend on the original `outputs/kobo-codex` and `work` layout, private backup markers, and a USB-mounted Kobo. They are preserved as work history under `legacy-work/installers/`; adapt and review them before reuse. Do not run them blindly from this new project.
 
 The transfer excludes the original `.private` tree, connection.json, installation.json, certificates/keys/auth, rollback archives, captured images, PDFs, Swift/build caches, compiled OCR/transport binaries, Node modules and the official KOReader archive itself. Third-party annotation plugins are not part of this source bundle.
 
