@@ -28,7 +28,7 @@ writeFileSync(join(root, 'connection.json'), JSON.stringify({ host, port: 9443, 
 writeFileSync(join(root, 'codex-home', 'config.toml'), `# Dedicated chat-only profile. Do not add MCP servers or plugins here.
 sandbox_mode = "read-only"
 approval_policy = "never"
-web_search = "disabled"
+web_search = "live"
 project_doc_max_bytes = 0
 [features]
 shell_tool = false

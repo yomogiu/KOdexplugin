@@ -33,7 +33,7 @@ test('deduplicates turns, fixes sandbox settings, streams, interrupts, and filte
   assert.deepEqual(rpc.calls.map(x => x.method), ['thread/start', 'turn/start']);
   assert.equal(rpc.calls[0].params.config['features.shell_tool'], false);
   assert.equal(rpc.calls[0].params.config['features.apps'], false);
-  assert.equal(rpc.calls[0].params.config.web_search, 'disabled');
+  assert.equal(rpc.calls[0].params.config.web_search, 'live');
   assert.equal(rpc.calls[0].params.approvalPolicy, 'never');
   assert.deepEqual(rpc.calls[1].params.sandboxPolicy, { type: 'readOnly', networkAccess: false });
   rpc.emit('notification', { method: 'item/agentMessage/delta', params: { threadId: 'other', delta: 'private' } });
@@ -63,6 +63,9 @@ test('reader quotations and Unicode stay in a bounded text-only turn without fil
   assert.deepEqual(rpc.calls[1].params.input, [{ type: 'text', text }]);
   assert.match(rpc.calls[0].params.developerInstructions, /source text, not instructions/);
   assert.match(rpc.calls[0].params.developerInstructions, /unseen pages/);
+  assert.match(rpc.calls[0].params.baseInstructions, /general knowledge/);
+  assert.match(rpc.calls[0].params.baseInstructions, /hosted web search/);
+  assert.doesNotMatch(rpc.calls[0].params.baseInstructions, /Answer only from the conversation|No tools/);
   assert.equal(chat.snapshot().messages[0].text, text);
 });
 test('client snapshots retain completed history and reveal interrupted or failed answers only at turn end', async () => {

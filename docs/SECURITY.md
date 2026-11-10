@@ -21,10 +21,18 @@ The proxy refuses other hosts, plaintext forwarding, alternate ports, and upstre
 proxy chaining. It carries encrypted TLS rather than decrypting model traffic.
 
 The Codex process cannot directly read the library, vault, chat archives, or export
-queue. Shell and app tools, browser/computer use, image reading, web search, host skill
+queue. Shell and app tools, browser/computer use, image reading, host skill
 discovery, memories, and telemetry exporters are disabled by this bridge's settings.
+Hosted live web search is enabled through OpenAI; it does not grant the local process
+general Internet access or file-writing tools. Search queries may include relevant
+submitted conversation or passage content. Retrieved pages are untrusted source material.
 Unexpected tool/approval requests are refused, and startup rejects exposed MCP servers
 or unsafe model sandbox settings. Startup has no unrestricted fallback.
+
+Model turns remain read-only with local networking disabled and no approval escalation.
+The Codex runtime can still write its own authentication/profile and private temporary
+state within the macOS sandbox. The Node bridge separately writes explicit chat archives
+and export records; this is not model access to arbitrary local files.
 
 The Node bridge itself runs as the user and is trusted host-side code. The Obsidian
 plugin inherits Obsidian's permissions; using the Vault API does not sandbox other

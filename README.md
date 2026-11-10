@@ -134,6 +134,9 @@ a secret token; keep it private.
   **Highlight** action when you want to save a permanent annotation.
 - **Continue the conversation:** type a follow-up below the answer. Replies
   appear when the turn finishes. Use **Stop** to interrupt a response.
+  Ask Codex can draw on general knowledge, explore broader ideas, and use hosted
+  live web search. It receives only the passages you submit, not the whole book,
+  and has no local file-writing tools.
 - **Return to the book:** tap **Read**. A question already submitted can finish
   while the note is closed.
 - **Write a question:** tap **Expand**, then **Pen**, write on the pad, and tap
