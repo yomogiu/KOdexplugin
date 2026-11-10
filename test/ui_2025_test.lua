@@ -121,7 +121,10 @@ function Input:isKeyboardVisible()return self.keyboard_visible end
 function Input:lockKeyboard()end
 function Input:toggleKeyboard(force)
  self.input=self:getInputText();self._charpos=self._input_widget.cursor
- if force==nil then self.keyboard_visible=not self.keyboard_visible else self.keyboard_visible=force end
+ if force==false then self._keyboard_was_visible=self.keyboard_visible==true end
+ if force~=nil then self.keyboard_visible=force
+ elseif self._keyboard_was_visible~=nil then self.keyboard_visible=self._keyboard_was_visible;self._keyboard_was_visible=nil
+ else self.keyboard_visible=not self.keyboard_visible end
  self:init()
 end
 function Input:reinit()self.input=self:getInputText();self._charpos=self._input_widget.cursor;self:init()end
@@ -925,6 +928,47 @@ note._input_widget.cursor=3
 note.button_table:getButtonById('expand').callback();ui.ticks[#ui.ticks]()
 assert(np.viewer==note and not note.compact and note.covers_fullscreen and #note.buttons==2)
 assert(note:getInputText()=='Follow-up draft'and note._input_widget.cursor==3 and note.button_table:getButtonById('keyboard'))
+assert(not note.keyboard_visible and note.vgroup:getSize().h==screen.h,'Expand must give reading the full screen without keyboard')
+local reading_height=note.transcript_height
+note.button_table:getButtonById('keyboard').callback()
+assert(note.keyboard_visible and note.transcript_height==reading_height-600,'Keys must restore keyboard and resize transcript')
+note.button_table:getButtonById('keyboard').callback()
+assert(not note.keyboard_visible and note.transcript_height==reading_height,'Keys must also hide keyboard after a forced hide')
+
+-- More must finish its button event before hiding keys and creating a modal
+-- popup. Pending composer focus cannot raise a keyboard above that popup.
+note:onSwitchFocus(note._input_widget);local delayed_focus=ui.ticks[#ui.ticks]
+local shown_before=#ui.shown
+note.button_table:getButtonById('more').callback()
+note.button_table:getButtonById('more').callback()
+local more_task=ui.ticks[#ui.ticks]
+delayed_focus();assert(not note.keyboard_visible,'More must cancel queued keyboard opening')
+assert(#ui.shown==shown_before,'More must not rebuild inside button dispatch')
+more_task()
+local conversation=ui.shown[#ui.shown]
+assert(#ui.shown==shown_before+1 and conversation.title=='Conversation')
+assert(conversation.modal and conversation.stop_events_propagation and note.modal_overlay_count==1,'menu must stack above keyboard and block underlying events')
+local forwarded=note.forwarded_event
+assert(note:handleEvent({handler='onGesture'})==true and note.forwarded_event==forwarded,'covered Read/Compact controls must not receive gestures')
+local tick_count=#ui.ticks
+note:onSwitchFocus(note._input_widget)
+assert(#ui.ticks==tick_count,'covered composer must not schedule a keyboard')
+local back=conversation.buttons[#conversation.buttons][1]
+assert(back.text=='Back to chat');back.callback()
+assert(note.modal_overlay_count==0 and not note.keyboard_visible,'Back must release chat without restoring keyboard')
+assert(note:getInputText()=='Follow-up draft'and note._input_widget.cursor==3)
+-- Also enter More from an already visible keyboard, then dismiss outside
+-- through the same close lifecycle used by ButtonDialog:onTapClose.
+note.button_table:getButtonById('keyboard').callback()
+assert(note.keyboard_visible)
+note.button_table:getButtonById('more').callback();ui.ticks[#ui.ticks]()
+assert(not note.keyboard_visible and note.transcript_height==reading_height)
+conversation=ui.shown[#ui.shown];ui:close(conversation)
+assert(note.modal_overlay_count==0 and not note.keyboard_visible)
+-- Expand must win over focus callbacks queued earlier in the same UI tick.
+note:onSwitchFocus(note._input_widget);delayed_focus=ui.ticks[#ui.ticks]
+note:queueExpanded(true);local expand_task=ui.ticks[#ui.ticks]
+delayed_focus();expand_task();assert(not note.keyboard_visible)
 note:setPenMode(true)
 assert(note.pen_mode and not note.compact)
 note.ink_data.strokes={{{10,10},{20,20}}};note.ink_data.version=note.ink_data.version+1

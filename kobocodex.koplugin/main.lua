@@ -182,12 +182,25 @@ function KoboCodex:message(text)
 end
 function KoboCodex:showOverlay(widget_class, options)
     local Screen = require("device").screen
+    -- VirtualKeyboard is modal too: overlays must stack above it and consume
+    -- unhandled input before InputDialog's always-active controls see it.
+    options.modal=true
+    options.stop_events_propagation=true
     -- Reserve space for popup borders/scrollbars in either orientation.
     options.width = math.floor(math.min(Screen:getWidth(), Screen:getHeight()) * 0.85)
     local widget = widget_class:new(options)
+    local panel=self.viewer
+    if panel then
+        panel:cancelKeyboardOpening()
+        panel.modal_overlay_count=(panel.modal_overlay_count or 0)+1
+    end
     local on_close = widget.onCloseWidget
+    local closed=false
     widget.onCloseWidget = function(w)
+        if closed then return end
+        closed=true
         if on_close then on_close(w) end
+        if panel then panel.modal_overlay_count=math.max(0,(panel.modal_overlay_count or 1)-1) end
         -- Refresh beyond the popup's cached rectangle so edges cannot linger.
         UIManager:setDirty("all", "flashui")
     end
@@ -551,6 +564,7 @@ function KoboCodex:more()
         callback=choose(function()self:history()end)}}) end
     if self.selection_context then table.insert(buttons,1,{{text="Explain selected passage",enabled=not self.state.active,
         callback=choose(function() self:explainSelection() end)}}) end
+    table.insert(buttons,{{text="Back to chat",callback=choose(function() end)}})
     menu = self:showOverlay(ButtonDialog, { title = "Conversation", buttons = buttons })
 end
 function KoboCodex:onCloseWidget() self:hide() end

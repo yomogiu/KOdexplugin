@@ -94,7 +94,7 @@ function ChatPanel:init()
         { text = "Keys", id = "keyboard", callback = function()
             if self.ink_busy then return end
             if self.pen_mode then self:setPenMode(false) end
-            self:toggleKeyboard()
+            self:toggleKeyboard(not self:isKeyboardVisible())
         end },
         { text = "Pen", id = "pen", callback = function() self:queuePenMode(not self.pen_mode) end },
         { text = "Send", id = "send", callback = function()
@@ -102,7 +102,7 @@ function ChatPanel:init()
             else self.on_send(self:getInputText()) end
         end },
         { text = "Stop", id = "stop", callback = function() self.on_stop() end },
-        { text = "More", callback = function() self.on_more() end },
+        { text = "More", id = "more", callback = function() self:queueMore() end },
         { text = "Close", id = "close", callback = function() UIManager:close(self) end },
     }}
     if self.note_mode then
@@ -208,15 +208,35 @@ end
 
 function ChatPanel:queueExpanded(enabled)
     if self.ink_busy or self.expand_queued then return end
+    self:cancelKeyboardOpening()
     self.expand_queued=true
     UIManager:nextTick(function()
         self.expand_queued=nil
         if self.dismissed then return end
         self.expanded=enabled
         if not enabled then self.pen_mode=false end
-        self:reinit()
+        if enabled and self:isKeyboardVisible() then self:toggleKeyboard(false)
+        else self:reinit() end
         if self.compact then self:onSwitchFocus(self._input_widget) end
         UIManager:setDirty("all","ui")
+    end)
+end
+
+function ChatPanel:cancelKeyboardOpening()
+    self.keyboard_request=(self.keyboard_request or 0)+1
+    self.opening_keyboard=nil
+end
+
+function ChatPanel:queueMore()
+    if self.more_queued or self.dismissed then return end
+    self:cancelKeyboardOpening()
+    self.more_queued=true
+    -- Finish the button event before resizing/freeing its parent tree.
+    UIManager:nextTick(function()
+        self.more_queued=nil
+        if self.dismissed then return end
+        if self:isKeyboardVisible() then self:toggleKeyboard(false) end
+        self.on_more()
     end)
 end
 
@@ -346,6 +366,7 @@ function ChatPanel:saveDisplayDiagnostic(phase)
 end
 
 function ChatPanel:handleEvent(event)
+    if (self.modal_overlay_count or 0)>0 and event.handler=="onGesture" then return true end
     if self:screenSizeChanged() then
         self:queueScreenResize()
         -- Don't send a touch to controls at their old orientation's coordinates.
@@ -591,6 +612,7 @@ function ChatPanel:latest()
 end
 
 function ChatPanel:toggleKeyboard(force)
+    if force==false then self:cancelKeyboardOpening() end
     self:rememberTranscriptPosition()
     if self.ink_widget then self.ink_widget:detach() end
     self.resizing = true
@@ -611,13 +633,15 @@ ChatPanel.onKeyboardHeightChanged = ChatPanel.reinit
 
 function ChatPanel:onSwitchFocus(input)
     input.focused = true
-    if self.ink_busy then return end
+    if self.ink_busy or (self.modal_overlay_count or 0)>0 then return end
     if not self:isKeyboardVisible() and not self.opening_keyboard then
         self.opening_keyboard = true
+        local request=self.keyboard_request
         -- Do not free the input while its tap handler is still using its cursor.
         UIManager:nextTick(function()
+            if request~=self.keyboard_request then return end
             self.opening_keyboard = nil
-            if not self.dismissed then self:toggleKeyboard(true) end
+            if not self.dismissed and (self.modal_overlay_count or 0)==0 then self:toggleKeyboard(true) end
         end)
     end
 end

@@ -14,7 +14,7 @@ Codex answer bodies receive a light gray highlight (16% darkening). Labels and u
 
 The input uses KOReader's native focus/cursor behavior. No periodic cursor animation was added: the note does not schedule continuous e-ink refreshes. Both input and transcript use font size 18 in note mode.
 
-Expand keeps the same panel and exposes the full keyboard/pen/Stop/More controls. Handwriting uses the expanded writing surface. Compact returns to the smaller dialog and retains draft, cursor and unsent ink. A pending OCR job must finish or be cancelled before switching modes. Generic chat from the file manager keeps the full-size layout.
+Expand keeps the same panel, hides the keyboard, and gives the transcript the available screen height for reading. Keys explicitly shows or hides the keyboard; tapping the composer also opens it. More hides the keyboard before opening the modal Conversation menu, which consumes input above the chat and includes Back to chat. Closing that menu leaves the keyboard hidden. Handwriting uses the expanded writing surface. Compact returns to the smaller dialog with the keyboard ready and retains draft, cursor and unsent ink. A pending OCR job must finish or be cancelled before switching modes. Generic chat from the file manager keeps the full-size layout.
 
 ## Rendering and sizing
 
