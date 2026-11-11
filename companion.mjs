@@ -156,7 +156,8 @@ export class Companion {
       if (kind === 'archive') {
         if (!ID.test(documentId) || !ID.test(archiveId)) throw error(400, 'Invalid archive identity');
         const saved = await this.archives.load(documentId, archiveId);
-        title = saved.title; source = { kind, documentId, conversationId: archiveId };
+        title = saved.title; source = { kind, documentId, conversationId: archiveId,
+          ...(saved.documentName ? { documentName: saved.documentName } : {}) };
         messages = saved.messages.map((m, i) => ({ id: digest(`${documentId}:${archiveId}:${i}`).slice(0, 32), role: m.role, text: m.text,
           ...(m.wireText !== undefined ? { submittedText: m.wireText } : {}) }));
       } else {
@@ -194,7 +195,8 @@ export class Companion {
   }
   async archiveList() {
     const entries = await this.archives.catalog();
-    return entries.map(r => ({ documentId: r.documentId, archiveId: r.id, title: r.title, createdAt: r.createdAt, messageCount: r.messageCount }));
+    return entries.map(r => ({ documentId: r.documentId, archiveId: r.id, title: r.title, createdAt: r.createdAt, messageCount: r.messageCount,
+      ...(r.documentName ? { documentName: r.documentName } : {}) }));
   }
 }
 

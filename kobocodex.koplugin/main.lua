@@ -248,7 +248,8 @@ function KoboCodex:rememberPrompt(wire_text,question,context)
             self.display_prompts[table.remove(self.display_prompt_order,1)]=nil
         end
     end
-    self.display_prompts[wire_text]=question.."\n\nPassage: "..Selection.source(context)
+    local name=DocumentScope.name(self.ui.document)
+    self.display_prompts[wire_text]=question.."\n\nPassage: "..Selection.source(context)..(name and "\n\nDocument: "..name or "")
 end
 function KoboCodex:conversationText()
     local cached = self.text_cache or {messages={}}
@@ -393,6 +394,7 @@ function KoboCodex:send(text,options)
     if panel then panel.follow_tail=true end
     local ink_version = panel and panel.ink_data and panel.ink_data.version
     local prompt_body={text=request_text,requestId=self.request_id}
+    prompt_body.documentName=DocumentScope.name(self.ui.document)
     if request_text~=text then prompt_body.displayText=text.."\n\nPassage: "..Selection.source(context) end
     self:requestAsync("POST", "/v1/prompt", json.encode(prompt_body), "sending", function(ok, data)
         local stop = self.stop_after_send
@@ -523,7 +525,8 @@ function KoboCodex:showHistory(archives,page)
     if page<pages then table.insert(navigation,{text="Next",callback=function()UIManager:close(menu);self:showHistory(archives,page+1)end}) end
     if #navigation>0 then table.insert(buttons,navigation) end
     table.insert(buttons,{{text="Back to chat",callback=function()UIManager:close(menu)end}})
-    menu=self:showOverlay(ButtonDialog,{title=#archives==0 and "No saved chats for this book" or ("Chat history — "..page.."/"..pages),buttons=buttons})
+    local name=DocumentScope.name(self.ui.document)
+    menu=self:showOverlay(ButtonDialog,{title=(#archives==0 and "No saved chats" or ("Chat history — "..page.."/"..pages))..(name and " — "..name or " for this book"),buttons=buttons})
 end
 function KoboCodex:reopenChat(id)
     if not self.ui.document or not self.viewer or self.reader_closing or not DocumentScope.valid(id) then return end

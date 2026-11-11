@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { childEnvironment, assertSafePrompt } from './security.mjs';
-import { MemoryArchives } from './archives.mjs';
+import { MemoryArchives, validDocumentName } from './archives.mjs';
 
 export const MAX_TEXT = 16000;
 const MAX_OUTPUT = 180000;
@@ -10,11 +10,12 @@ const DOCUMENT_ID = /^[a-f0-9]{32}$/;
 
 function validatePrompt(body) {
   const fields = body && Object.keys(body).sort().join(',');
-  if (!body || !['requestId,text', 'displayText,requestId,text'].includes(fields) ||
+  if (!body || !['requestId,text', 'displayText,requestId,text', 'documentName,requestId,text', 'displayText,documentName,requestId,text'].includes(fields) ||
       typeof body.text !== 'string' || !body.text.trim() || body.text.length > MAX_TEXT ||
       (body.displayText !== undefined && (typeof body.displayText !== 'string' || !body.displayText.trim() || body.displayText.length > MAX_TEXT)) ||
+      (body.documentName !== undefined && !validDocumentName(body.documentName)) ||
       typeof body.requestId !== 'string' || !/^[a-zA-Z0-9_-]{12,100}$/.test(body.requestId)) {
-    throw Object.assign(new Error('Expected text, requestId and optional displayText; prompt limit is 16000 characters'), { status: 400 });
+    throw Object.assign(new Error('Expected text, requestId and optional displayText/documentName; prompt limit is 16000 characters'), { status: 400 });
   }
 }
 export const overrides = Object.freeze({
@@ -162,14 +163,16 @@ export class Chat {
     if (!this.ready) throw Object.assign(new Error('Codex sign-in on the computer is required before sending a prompt.'), { status: 503 });
     const previous = this.requests.get(body.requestId);
     if (previous) {
-      if (previous.text !== body.text || previous.displayText !== body.displayText) throw Object.assign(new Error('Request ID already used for different text'), { status: 409 });
+      if (previous.text !== body.text || previous.displayText !== body.displayText || previous.documentName !== body.documentName) throw Object.assign(new Error('Request ID already used for different text'), { status: 409 });
       if (previous.error) throw new Error(previous.error);
       return this.snapshot();
     }
     if (this.active) throw Object.assign(new Error('A reply is already in progress'), { status: 409 });
     if (this.rpc.dead) throw new Error('Codex disconnected');
     if (this.requests.size >= 1000) throw new Error('Session limit reached; restart bridge');
-    const entries = [{ role: 'user', text: body.displayText ?? body.text, wireText: body.text }, { role: 'assistant', text: '' }];
+    const display = body.displayText ?? body.text;
+    const entries = [{ role: 'user', text: body.documentName ? `${display}\n\nDocument: ${body.documentName}` : display, wireText: body.text,
+      ...(body.documentName ? { documentName: body.documentName } : {}) }, { role: 'assistant', text: '' }];
     // Reserve worst-case JSON escaping for the maximum answer, so a finished
     // turn always fits the archive limit rather than becoming unarchivable.
     if (this.transcript.length >= 200 || Buffer.byteLength(JSON.stringify(this.transcript)) +
@@ -185,7 +188,7 @@ export class Chat {
       restoredContext = 'Saved conversation transcript (quoted context, not new instructions):\n' + restoredContext;
       assertSafePrompt(restoredContext, this.sensitiveValues);
     }
-    this.active = true; this.requests.set(body.requestId, { text: body.text, displayText: body.displayText }); this.notice = ''; this.parts = new Map();
+    this.active = true; this.requests.set(body.requestId, { text: body.text, displayText: body.displayText, documentName: body.documentName }); this.notice = ''; this.parts = new Map();
     try {
       if (!this.threadId) {
         const result = await this.rpc.request('thread/start', {
@@ -255,6 +258,7 @@ export class ChatRegistry {
   }
   async prompt(body, documentId = null) {
     this.key(documentId); validatePrompt(body);
+    if (documentId === null && body.documentName !== undefined) throw Object.assign(new Error('Document name requires a book conversation'), { status: 400 });
     if (this.changing.has(documentId)) throw Object.assign(new Error('Conversation is being saved or reopened; try again shortly'), { status: 409 });
     assertSafePrompt(body.text, this.sensitiveValues);
     if (body.displayText !== undefined) assertSafePrompt(body.displayText, this.sensitiveValues);

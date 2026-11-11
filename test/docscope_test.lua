@@ -1,4 +1,8 @@
 local Scope=dofile('kobocodex.koplugin/docscope.lua')
+assert(Scope.name({file='/mnt/onboard/Books/Private/Example 中文.pdf'})=='Example 中文.pdf')
+assert(Scope.name({file='C:\\Books\\Example.pdf'})=='Example.pdf')
+for _,file in ipairs({'','/','..','bad\nname.pdf',string.rep('a',241)})do assert(not Scope.name({file=file}))end
+assert(not Scope.name(nil))
 local function settings()
  local data={partial_md5_checksum=string.rep('a',32)}
  return {data=data,readSetting=function(_,key)return data[key]end,saveSetting=function(_,key,value)data[key]=value end}

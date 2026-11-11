@@ -21,6 +21,36 @@ class RPC extends EventEmitter {
   }
 }
 const body = (text, requestId = 'archive-request-001') => ({ text, requestId });
+
+test('document basename stays out of model input and survives archive/reopen with readable titles', async t => {
+  const { store } = await disk(t);
+  const rpc = new RPC(), chats = new ChatRegistry(rpc, '/empty', [], { archives: store });
+  const documentName = 'The Book 中文.pdf';
+  const request = { ...body('Selected passage text'), displayText: 'Explain this\n\nPassage: PDF physical page 3 (1-based)', documentName };
+  await chats.prompt(request, A);
+  assert.deepEqual(rpc.calls.find(c => c.method === 'turn/start').params.input, [{ type: 'text', text: request.text }]);
+  rpc.answer(chats.chats.get(A), 'Answer');
+  assert.match(chats.snapshot(A).messages[0].text, /Document: The Book 中文.pdf/);
+  await assert.rejects(chats.prompt({ ...request, documentName: 'Another.pdf' }, A), /different text/);
+  await chats.reset(A);
+  const saved = (await chats.history(A)).archives[0];
+  assert.equal(saved.title, `Explain this — ${documentName}`);
+  assert.equal(saved.documentName, documentName);
+  assert.equal((await store.load(A, saved.id)).documentName, documentName);
+  await chats.reopen({ archiveId: saved.id }, A);
+  await chats.prompt(body('Follow-up', 'follow-up-named-001'), A);rpc.answer(chats.chats.get(A), 'Another answer');
+  await chats.reset(A);
+  assert.equal((await chats.history(A)).archives[0].documentName, documentName);
+});
+
+test('document metadata rejects paths and unsafe names before allocating a conversation', async () => {
+  const rpc = new RPC(), chats = new ChatRegistry(rpc, '/empty');
+  for (const documentName of ['', '.', '..', '/private/Book.pdf', 'C:\\Book.pdf', 'Bad\nname.pdf', 'a'.repeat(241), 'bad\u202ename.pdf']) {
+    await assert.rejects(chats.prompt({ ...body('Question'), documentName }, A));
+  }
+  await assert.rejects(chats.prompt({ ...body('Question'), documentName: 'Book.pdf' }), /requires a book/);
+  assert.equal(rpc.calls.length, 0);assert.equal(chats.chats.size, 0);
+});
 async function disk(t, options) {
   const root = await mkdtemp(join(tmpdir(), 'kodex-archives-'));
   t.after(() => rm(root, { recursive: true, force: true }));

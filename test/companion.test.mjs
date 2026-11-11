@@ -255,3 +255,28 @@ test('plugin migrates saved connection without any filesystem access to its old 
   assert.deepEqual(touched, []);
   assert.equal((await upgraded.call('/v1/status')).destinationId, f.client.state.destinationId);
 });
+
+test('named PDF exports identify source in catalog, note title, filename and literal content', async t => {
+  const f = await fixture(t), doc = 'd'.repeat(32), documentName = 'Économie: [[Notes]]?.pdf';
+  const saved = await f.archives.save(doc, [
+    { role: 'user', text: `Explain this\n\nPassage: PDF physical page 3 (1-based)\n\nDocument: ${documentName}`, wireText: 'Selected source text', documentName },
+    { role: 'assistant', text: 'Explanation' },
+  ]);
+  await f.client.connect(f.pairingFile);
+  const catalog = await f.client.call('/v1/archives');
+  assert.equal(catalog.archives[0].documentName, documentName);
+  assert.equal(catalog.archives[0].title, `Explain this — ${documentName}`);
+  await f.client.call('/v1/export', { documentId: doc, archiveId: saved.id });
+  const pending = await f.client.call('/v1/pending');
+  assert.equal(pending.record.source.documentName, documentName);
+  const result = await f.client.sync();
+  assert.match(result.lastPath, /Économie_ __Notes___\.pdf - [a-f0-9]{32}\.md$/);
+  assert.equal(result.lastPath.split('/').length, 3);
+  const text = await readFile(join(f.vaultRoot, result.lastPath), 'utf8');
+  assert.ok(text.includes(`title: ${JSON.stringify(`Explain this — ${documentName}`)}`));
+  assert.ok(text.includes(`document_name: ${JSON.stringify(documentName)}`));
+  assert.ok(text.includes('PDF physical page 3'));
+  assert.ok(text.includes(`## Source document\n\n\`\`\`text\n${documentName}`));
+  const same = await f.client.call('/v1/export', { documentId: doc, archiveId: saved.id });
+  assert.equal(same.status, 'delivered');assert.equal((await f.client.sync()).imported, 0);
+});

@@ -1,6 +1,6 @@
 # KOdex Companion for Obsidian
 
-Development preview 0.1.2 for Obsidian on macOS desktop. The Mac bridge remains
+Development preview 0.1.3 for Obsidian on macOS desktop. The Mac bridge remains
 the center of the system: Kobo questions go directly to the bridge and Codex.
 This companion receives explicitly queued notes and creates them in its own vault.
 
@@ -45,6 +45,15 @@ settings. Select an archive, review its title/message count and destination, the
 choose Import. The bridge exposes a metadata catalog; listing it does not export
 conversation text. The chosen export includes questions, assistant answers, and
 submitted passage context when retained in the archive.
+
+With the updated Kobo plugin and Mac bridge, newly submitted book questions retain
+the document basename (for example `My Book.pdf`) separately from the model prompt.
+New archive titles and imports include that name. The Obsidian filename includes
+the sanitized document name and stable export ID; the note includes the full name
+and submitted page references. Update the Kobo plugin, bridge, and companion together.
+Older archives without a recorded name remain importable; their source name cannot
+be inferred from a page number. Existing imported notes and delivery receipts are
+preserved and are not renamed or overwritten by this update.
 
 To create an archive from the Kobo, finish a book chat and choose New chat in
 the expanded chat menu. Existing chat archive behavior remains unchanged. This

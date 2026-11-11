@@ -748,6 +748,7 @@ local payload=reader_requests[#reader_requests].body
 assert(payload.text:find(quotation,1,true)and payload.text:find('PDF physical page 12 (1-based)',1,true))
 assert(payload.text:find('What is the central idea?',1,true)and not payload.text:find('NEVER_SEND',1,true))
 assert(payload.requestId and not payload.documentId and not payload.path and attached.sent)
+assert(payload.documentName=='NEVER_SEND_BOOK.pdf'and not payload.text:find(payload.documentName,1,true),'send only basename as separate display/archive metadata, never the file path or model prompt')
 assert(reading_panel.conversation_text:find('What is the central idea?',1,true)and
  not reading_panel.conversation_text:find(quotation,1,true)and not reading_panel.conversation_text:find('BEGIN SELECTED',1,true),
  'question display must stay short; the complete quotation belongs in the attachment preview')
@@ -1196,11 +1197,11 @@ archivedReader:history()
 assert(#ui.shown==beforeHistory and archivedReader.network_kind=='history','list network request must not block or create a premature menu')
 assert(archivedPanel:getInputText()=='Keep this draft')
 archivedReader:finish();local historyMenu=ui.shown[#ui.shown]
-assert(historyMenu.title=='Chat history — 1/2'and #historyMenu.buttons==7)
+assert(historyMenu.title=='Chat history — 1/2 — NEVER_SEND_DOCUMENT_5.pdf'and #historyMenu.buttons==7)
 assert(archivedReader.calls[#archivedReader.calls].path=='/v1/history')
 local numberCalls=#archivedReader.calls
 button(historyMenu,'Next').callback();historyMenu=ui.shown[#ui.shown]
-assert(historyMenu.title=='Chat history — 2/2'and #archivedReader.calls==numberCalls,'history page changes must not request or redraw the chat')
+assert(historyMenu.title=='Chat history — 2/2 — NEVER_SEND_DOCUMENT_5.pdf'and #archivedReader.calls==numberCalls,'history page changes must not request or redraw the chat')
 button(historyMenu,'Previous').callback();historyMenu=ui.shown[#ui.shown]
 historyMenu.buttons[1][1].callback();local confirmation=ui.shown[#ui.shown]
 assert(confirmation.text:find('current chat will be archived',1,true))
@@ -1219,6 +1220,6 @@ archivedReader.state.active=false;archivedReader:history();archivedReader:hide()
 archivedReader:finish();assert(#ui.shown==beforeHistory and not archivedReader.viewer,'late history result must not reopen a dismissed reader')
 archivedReader:render();failHistory=true;archivedReader:history();archivedReader:finish()
 assert(archivedReader.viewer:getInputText()=='Keep this draft')
-archivedReader:showHistory({},1);assert(ui.shown[#ui.shown].title=='No saved chats for this book')
+archivedReader:showHistory({},1);assert(ui.shown[#ui.shown].title=='No saved chats — NEVER_SEND_DOCUMENT_5.pdf')
 plugin:more();assert(not button(ui.shown[#ui.shown],'Chat history'),'file-manager/general chat has no book history')
 print('Archive UI checks passed: document-only controls, non-blocking metadata load, five-entry local pagination, archive confirmation, scoped reopen, failure/draft/ink preservation, stale attachment/retry cleanup, busy refusal and close safety')

@@ -34,7 +34,9 @@ function record(value) {
     value.version === 1 && ID.test(value.id) && ID.test(value.destinationId) &&
     typeof value.createdAt === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value.createdAt) && Number.isFinite(Date.parse(value.createdAt)) &&
     typeof value.title === 'string' && value.title.length <= 160 &&
-    keys(value.source, ['kind'], ['documentId', 'conversationId']) &&
+    keys(value.source, ['kind'], ['documentId', 'conversationId', 'documentName']) &&
+    (value.source.documentName === undefined || (typeof value.source.documentName === 'string' && value.source.documentName.trim().length > 0 && value.source.documentName.length <= 240 &&
+      !['.', '..'].includes(value.source.documentName) && !/[\\/\x00-\x1f\x7f-\x9f\u202a-\u202e\u2066-\u2069]/.test(value.source.documentName))) &&
     ['sample', 'archive'].includes(value.source.kind) &&
     (value.source.kind !== 'archive' || (ID.test(value.source.documentId) && ID.test(value.source.conversationId))) &&
     Array.isArray(value.messages) && value.messages.length > 0 && value.messages.length <= 200 &&
@@ -58,7 +60,9 @@ function render(value) {
     `created: ${JSON.stringify(value.createdAt)}`, `title: ${JSON.stringify(value.title)}`,
     `source: ${value.source.kind}`];
   if (value.source.kind === 'archive') lines.push(`document_id: ${value.source.documentId}`, `conversation_id: ${value.source.conversationId}`);
+  if (value.source.documentName) lines.push(`document_name: ${JSON.stringify(value.source.documentName)}`);
   lines.push('---', '', '# KOdex reading conversation', '', literal(value.title), '');
+  if (value.source.documentName) lines.push('## Source document', '', literal(value.source.documentName), '');
   for (const message of value.messages) {
     lines.push(`## ${message.role === 'user' ? 'Your question' : 'Assistant answer'}`, '', literal(message.text), '', `^kodex-${message.id}`, '');
     if (message.submittedText && message.submittedText !== message.text) {

@@ -51,6 +51,10 @@ own export size limit. See the [companion guide](../obsidian-kodex/README.md).
 
 Archives live in the configured Mac runtime's `.private/chat-archives/`. They contain
 questions, submitted passage context, assistant responses, a title, and a timestamp.
+New book questions also retain the document basename as display/archive metadata.
+Named archive titles append the basename, and the Kobo history heading identifies
+the current document. Folder paths stay on the reader; the basename is not added
+to model input. Older archives without that metadata remain readable.
 They are plaintext local files with owner-only permissions, not encrypted backups.
 The model cannot directly access this directory. Keep it out of shared source and
 public backups; see [security and privacy](SECURITY.md).

@@ -4,6 +4,10 @@ import { join } from 'node:path';
 
 const ID = /^[a-f0-9]{32}$/;
 const MAX_FILE = 3000000;
+export function validDocumentName(value) {
+  return typeof value === 'string' && value.trim().length > 0 && value.length <= 240 &&
+    !['.', '..'].includes(value) && !/[\\/\x00-\x1f\x7f-\x9f\u202a-\u202e\u2066-\u2069]/.test(value);
+}
 function checkId(id) {
   if (typeof id !== 'string' || !ID.test(id)) throw Object.assign(new Error('Invalid archive identity'), { status: 400 });
 }
@@ -11,16 +15,18 @@ function checkRecord(record, documentId, id) {
   if (!record || record.version !== 1 || record.documentId !== documentId || record.id !== id ||
       typeof record.createdAt !== 'string' || !Number.isFinite(Date.parse(record.createdAt)) ||
       typeof record.title !== 'string' || record.title.length > 160 ||
+      (record.documentName !== undefined && !validDocumentName(record.documentName)) ||
       !Array.isArray(record.messages) || !record.messages.length || record.messages.length > 200 ||
       record.messages.some(m => !m || !['user', 'assistant'].includes(m.role) ||
         typeof m.text !== 'string' || m.text.length > 180000 ||
+        (m.documentName !== undefined && (m.role !== 'user' || !validDocumentName(m.documentName))) ||
         (m.wireText !== undefined && (m.role !== 'user' || typeof m.wireText !== 'string' || m.wireText.length > 16000)))) {
     throw new Error('Invalid saved conversation; archive left unchanged');
   }
   return record;
 }
-function metadata({ id, createdAt, title, messages }) {
-  return { id, createdAt, title, messageCount: messages.length };
+function metadata({ id, createdAt, title, messages, documentName }) {
+  return { id, createdAt, title, messageCount: messages.length, ...(documentName ? { documentName } : {}) };
 }
 
 // A memory implementation keeps registry unit tests independent of disk.
@@ -59,10 +65,14 @@ export class MemoryArchives {
     if (!messages.length) return null;
     return this.serial(async () => {
       const firstQuestion = messages.find(m => m.role === 'user')?.text || 'Conversation';
-      const title = [...firstQuestion.replace(/[\s\x00-\x1f\x7f]+/g, ' ').trim()].slice(0, 70).join('');
+      const documentName = messages.find(m => m.role === 'user' && m.documentName)?.documentName;
+      if (documentName !== undefined && !validDocumentName(documentName)) throw new Error('Invalid document name');
+      const clip = (text, length) => text.slice(0, length).replace(/[\uD800-\uDBFF]$/, '');
+      const question = clip(firstQuestion.split('\n')[0].replace(/[\s\x00-\x1f\x7f]+/g, ' ').trim(), 70);
+      const title = documentName ? `${question} — ${clip(documentName, 85)}` : [...firstQuestion.replace(/[\s\x00-\x1f\x7f]+/g, ' ').trim()].slice(0, 70).join('');
       const id = randomBytes(16).toString('hex');
       const record = checkRecord({ version: 1, documentId, id,
-        createdAt: new Date().toISOString(), title, messages: structuredClone(messages) }, documentId, id);
+        createdAt: new Date().toISOString(), title, ...(documentName ? { documentName } : {}), messages: structuredClone(messages) }, documentId, id);
       const payload = JSON.stringify(record);
       const size = Buffer.byteLength(payload);
       const files = await this.inventory();

@@ -1,7 +1,14 @@
 -- Opaque conversation identity in KOReader's ordinary per-book settings.
--- Never reads/copies a book or sends a filename/path/fingerprint to the bridge.
+-- Never reads/copies a book or sends a folder path/fingerprint to the bridge.
 local Scope = {}
 local KEY = "kobocodex_chat_scope"
+
+function Scope.name(document)
+    local file=document and document.file
+    if type(file)~="string" then return end
+    local name=file:match("([^/\\]+)$")
+    if name and #name<=240 and name:match("%S") and not name:find("%c") and name~="." and name~=".." then return name end
+end
 
 function Scope.valid(id)
     return type(id)=="string" and #id==32 and id:match("^[a-f0-9]+$")~=nil

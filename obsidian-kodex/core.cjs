@@ -168,7 +168,10 @@ class Connection {
     let receipt = this.state.receipts[item.id];
     if (!receipt) {
       P.check(Object.keys(this.state.receipts).length < 500, 'Local delivery history is full');
-      receipt = { path: `${this.state.folder}/${item.createdAt.slice(0, 10)} - KOdex - ${item.id}.md`, hash, stage: 'planned' };
+      // Keep a readable source in Obsidian's file title, plus the stable ID.
+      // Existing receipts retain their original filename on retry.
+      const name = item.source.documentName?.replace(/[<>:"/\\|?*#\[\]^\x00-\x1f\x7f-\x9f]/g, '_').replace(/^[. ]+|[. ]+$/g, '').slice(0, 80).replace(/[\uD800-\uDBFF]$/, '').replace(/[. ]+$/g, '');
+      receipt = { path: `${this.state.folder}/${item.createdAt.slice(0, 10)} - KOdex - ${name ? name + ' - ' : ''}${item.id}.md`, hash, stage: 'planned' };
       await this.save({ ...this.state, receipts: { ...this.state.receipts, [item.id]: receipt } });
     }
     P.check(receipt.hash === hash, 'Export content changed unexpectedly');
