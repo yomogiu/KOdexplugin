@@ -369,6 +369,33 @@ export class ChatRegistry {
 export function handler(chat, token, { recognizer } = {}) {
   let windowStart = Date.now(), count = 0;
   const polls = new Map();
+  let waiting = 0;
+  const sameMessages = (a, b) => a.length === b.length &&
+    a.every((m, i) => m.role === b[i].role && m.text === b[i].text);
+  // Stay below the Kobo's three-second socket timeout. Listeners and timers
+  // belong to the response, so cancelling its worker releases the wait.
+  const waitForChange = (res, documentId, initial) => new Promise(resolve => {
+    let timer, finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      for (const event of ['notification', 'blocked', 'closed']) chat.rpc.removeListener(event, check);
+      res.removeListener('close', finish);
+      waiting--;
+      resolve();
+    };
+    const check = () => {
+      const current = chat.snapshot(documentId);
+      if (current.active !== initial.active || current.notice !== initial.notice ||
+          !sameMessages(current.messages, initial.messages)) finish();
+    };
+    waiting++;
+    for (const event of ['notification', 'blocked', 'closed']) chat.rpc.on(event, check);
+    res.once('close', finish);
+    timer = setTimeout(finish, 2000);
+    check();
+  });
   return async (req, res) => {
     const reply = (status, data) => {
       if (res.destroyed) return;
@@ -390,11 +417,20 @@ export function handler(chat, token, { recognizer } = {}) {
       const documentId = scoped ? scoped[1] : null;
       if (req.method === 'GET' && scoped && path === '/v1/history') { reply(200, await chat.history(documentId)); return; }
       if (req.method === 'GET' && path === '/v1/state') {
-        const state = chat.snapshot(documentId);
+        let state = chat.snapshot(documentId);
+        if (req.headers['x-kodex-wait'] === '1' && state.active) {
+          const previous = polls.get(documentId);
+          if (previous && req.headers['x-kodex-revision'] === previous.revision &&
+              sameMessages(previous.messages, state.messages)) {
+            if (waiting >= 4) { reply(429, { error: 'Too many waiting polls' }); return; }
+            await waitForChange(res, documentId, state);
+            if (res.destroyed) return;
+            state = chat.snapshot(documentId);
+          }
+        }
         if (typeof req.headers['x-kodex-revision'] === 'string') {
           const previous = polls.get(documentId);
-          const same = previous && previous.messages.length === state.messages.length &&
-            previous.messages.every((m, i) => m.role === state.messages[i].role && m.text === state.messages[i].text);
+          const same = previous && sameMessages(previous.messages, state.messages);
           const revision = same ? previous.revision : randomUUID();
           if (!same) {
             if (polls.size >= 33) polls.delete(polls.keys().next().value);
@@ -402,6 +438,7 @@ export function handler(chat, token, { recognizer } = {}) {
           }
           if (req.headers['x-kodex-revision'] === revision) delete state.messages;
           state.revision = revision;
+          state.longPoll = true;
         }
         reply(200, state); return;
       }
@@ -430,6 +467,7 @@ export function handler(chat, token, { recognizer } = {}) {
         throw Object.assign(new Error('Empty JSON object required'), { status: 400 });
       }
       const result = path === '/v1/prompt' ? await chat.prompt(body, documentId) : path === '/v1/stop' ? await chat.stop(documentId) : await chat.reset(documentId);
+      result.longPoll = true;
       reply(200, result);
     } catch (e) { reply(e.status || 503, { error: e.status ? e.message : 'Codex is unavailable. Check the computer-side sign-in and bridge.' }); }
   };

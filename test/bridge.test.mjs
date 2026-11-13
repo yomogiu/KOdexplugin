@@ -184,3 +184,75 @@ test('stream storage is globally bounded and disconnect preserves the bounded pr
   chat.disconnected();
   assert.equal(chat.snapshot().messages.at(-1).text.length, 180000);
 });
+
+test('bounded long polls wake on completion, clean up on cancellation, and cap waiting requests', async () => {
+  const rpc = new FakeRPC(), chat = new Chat(rpc, '/empty');
+  await chat.prompt(prompt);
+  const serve = handler(chat, 'token');
+  const request = (revision = '0', wait = false) => {
+    const res = new EventEmitter();
+    res.destroyed = false;
+    res.writeHead = status => { res.status = status; };
+    res.end = data => { res.body = JSON.parse(data); };
+    const done = serve({ method: 'GET', url: '/v1/state', headers: {
+      authorization: 'Bearer token', 'x-kodex-revision': revision,
+      ...(wait ? { 'x-kodex-wait': '1' } : {}),
+    } }, res);
+    return { res, done };
+  };
+  const first = request(); await first.done;
+  assert.equal(first.res.body.longPoll, true);
+  const revision = first.res.body.revision;
+  const baseline = rpc.listenerCount('notification');
+  const pending = Array.from({ length: 4 }, () => request(revision, true));
+  assert.ok(pending.every(p => !p.res.body));
+  const excess = request(revision, true); await excess.done;
+  assert.equal(excess.res.status, 429);
+  pending[0].res.destroyed = true; pending[0].res.emit('close'); await pending[0].done;
+  assert.equal(rpc.listenerCount('notification'), baseline + 3);
+  rpc.emit('notification', { method: 'item/agentMessage/delta', params: { threadId: 'other', delta: 'unrelated' } });
+  rpc.emit('notification', { method: 'item/agentMessage/delta', params: { threadId: 'thread', delta: 'Finished answer' } });
+  assert.ok(pending.slice(1).every(p => !p.res.body), 'deltas do not wake complete-only clients');
+  rpc.emit('notification', { method: 'turn/completed', params: { threadId: 'thread', turn: { status: 'completed' } } });
+  await Promise.all(pending.map(p => p.done));
+  for (const p of pending.slice(1)) {
+    assert.equal(p.res.body.active, false);
+    assert.equal(p.res.body.messages.at(-1).text, 'Finished answer');
+    assert.notEqual(p.res.body.revision, revision);
+    assert.equal(p.res.listenerCount('close'), 0);
+  }
+  assert.equal(rpc.listenerCount('notification'), baseline);
+  const idle = request(pending[1].res.body.revision, true); await idle.done;
+  assert.equal(idle.res.body.messages, undefined);
+});
+
+test('long poll expires within its bound and disconnect releases partial text', async () => {
+  const rpc = new FakeRPC(), chat = new Chat(rpc, '/empty');
+  await chat.prompt(prompt);
+  const serve = handler(chat, 'token');
+  const request = async (revision = '0', wait = false) => {
+    const res = new EventEmitter();
+    res.writeHead = () => {};
+    res.end = data => { res.body = JSON.parse(data); };
+    await serve({ method: 'GET', url: '/v1/state', headers: {
+      authorization: 'Bearer token', 'x-kodex-revision': revision,
+      ...(wait ? { 'x-kodex-wait': '1' } : {}),
+    } }, res);
+    assert.equal(res.listenerCount('close'), 0);
+    return res.body;
+  };
+  const first = await request();
+  const start = performance.now();
+  const timeout = await request(first.revision, true);
+  const elapsed = performance.now() - start;
+  assert.ok(elapsed >= 1900 && elapsed < 3000, 'two-second server wait stays below socket timeout');
+  assert.equal(timeout.messages, undefined);
+  assert.equal(timeout.active, true);
+  const pending = request(first.revision, true);
+  rpc.emit('notification', { method: 'item/agentMessage/delta', params: { threadId: 'thread', delta: 'Partial' } });
+  rpc.emit('closed');
+  const disconnected = await pending;
+  assert.equal(disconnected.active, false);
+  assert.equal(disconnected.messages.at(-1).text, 'Partial');
+  assert.equal(rpc.listenerCount('notification'), 1);
+});

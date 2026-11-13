@@ -3,7 +3,7 @@
 local Transport = {}
 local function normalize(s) return (s:gsub(":", ""):lower()) end
 
-function Transport.request(config, method, path, body, revision)
+function Transport.request(config, method, path, body, revision, wait)
     assert(type(config) == "table", "Missing connection.json")
     assert(type(config.host) == "string" and config.host:match("^[%w][%w%.%-]*$"), "Invalid host")
     assert(type(config.port) == "number" and config.port % 1 == 0 and config.port > 0 and config.port < 65536, "Invalid port")
@@ -18,6 +18,7 @@ function Transport.request(config, method, path, body, revision)
     assert(scoped or (method == "GET" and (path == "/v1/state" or path == "/v1/recognize")) or
         (method == "POST" and (path == "/v1/prompt" or path == "/v1/stop" or path == "/v1/reset" or path == "/v1/recognize")), "Invalid operation")
     assert(revision == nil or (type(revision) == "string" and #revision <= 64 and revision:match("^[%w%-]+$")), "Invalid revision")
+    assert(wait == nil or (wait == true and method == "GET" and (path == "/v1/state" or operation == "state")), "Invalid wait")
     body = body or ""
     assert(#body <= (path == "/v1/recognize" and 800000 or 70000), "Request is too large")
     local socket = require("socket")
@@ -37,7 +38,7 @@ function Transport.request(config, method, path, body, revision)
         assert(digest == config.fingerprint, "Server certificate mismatch. No token or prompt was sent.")
         -- Nothing application-level has been transmitted before this point.
         local request = method .. " " .. path .. " HTTP/1.1\r\nHost: " .. config.host .. ":" .. config.port ..
-            (revision and "\r\nX-Kodex-Revision: " .. revision or "") .. "\r\nAuthorization: Bearer " .. config.token .. "\r\nConnection: close\r\nContent-Type: application/json\r\nContent-Length: " .. #body .. "\r\n\r\n" .. body
+            (wait and "\r\nX-Kodex-Wait: 1" or "") .. (revision and "\r\nX-Kodex-Revision: " .. revision or "") .. "\r\nAuthorization: Bearer " .. config.token .. "\r\nConnection: close\r\nContent-Type: application/json\r\nContent-Length: " .. #body .. "\r\n\r\n" .. body
         local deadline = socket.gettime() + 8
         local function budget()
             local remaining = deadline - socket.gettime()

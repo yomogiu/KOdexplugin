@@ -216,7 +216,8 @@ function KoboCodex:request(method, path, body,document_id)
     local polling = method == "GET" and path == "/v1/state"
     local same_document = cached and cached.documentId == document_id
     local revision = polling and (same_document and cached.revision or "0") or nil
-    local response = Transport.request(config, method, DocumentScope.path(path,document_id), body, revision)
+    local response = Transport.request(config, method, DocumentScope.path(path,document_id), body, revision,
+        polling and same_document and cached.active and cached.longPoll and true or nil)
     local data = json.decode(response.body)
     if document_id and response.status==404 then error("Update the Mac bridge to use this chat feature") end
     assert(response.status == 200, "Bridge: " .. tostring(data.error or response.status))
@@ -230,7 +231,7 @@ end
 function KoboCodex:schedulePoll()
     UIManager:unschedule(self.poll)
     if self.viewer and self.state and self.state.active and self.auto then
-        UIManager:scheduleIn(3, self.poll)
+        UIManager:scheduleIn(self.state.longPoll and 0.05 or 3, self.poll)
     end
 end
 function KoboCodex:refresh(open)

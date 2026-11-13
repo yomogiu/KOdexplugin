@@ -9,7 +9,7 @@ local ui={shown={},scheduled={},ticks={},dirty={}}
 function ui:show(w)self.shown[#self.shown+1]=w end
 function ui:close(w)if w.onCloseWidget then w:onCloseWidget()end end
 function ui:unschedule(f)self.scheduled[f]=nil end
-function ui:scheduleIn(_,f)self.scheduled[f]=true end
+function ui:scheduleIn(delay,f)self.scheduled[f]=true;self.delays=self.delays or {};self.delays[f]=delay end
 function ui:nextTick(f)self.ticks[#self.ticks+1]=f end
 function ui:tickAfterNext(f)self:nextTick(function()self:nextTick(f)end)end
 function ui:waitForVSync()self.vsync_waits=(self.vsync_waits or 0)+1 end
@@ -497,6 +497,12 @@ local sending_titles=panel.title_sets
 complete(write)
 assert(panel.title_sets==sending_titles+1 and panel.display_title:find('replying',1,true),'Send acknowledgment must transition straight to replying without an idle-title rebuild')
 assert(panel:getInputText()=='Newer draft'and panel._input_widget.cursor==3,'acknowledgment must preserve edits made during Send')
+plugin.state.longPoll=true
+plugin:schedulePoll()
+assert(ui.delays[plugin.poll]==0.05,'capable bridges must repoll promptly')
+plugin.state.longPoll=nil
+plugin:schedulePoll()
+assert(ui.delays[plugin.poll]==3,'older bridges retain their polling interval')
 local accepted=plugin.state
 read.callback(true,{active=false,messages={},notice='stale'})
 assert(plugin.state==accepted,'late superseded poll must not overwrite accepted Send')
