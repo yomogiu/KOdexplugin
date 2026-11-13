@@ -212,11 +212,19 @@ function KoboCodex:request(method, path, body,document_id)
     local raw = f:read(8193); f:close()
     assert(raw and #raw <= 8192, "Invalid connection file")
     local config = json.decode(raw)
-    local response = Transport.request(config, method, DocumentScope.path(path,document_id), body)
+    local cached = self.state
+    local polling = method == "GET" and path == "/v1/state"
+    local same_document = cached and cached.documentId == document_id
+    local revision = polling and (same_document and cached.revision or "0") or nil
+    local response = Transport.request(config, method, DocumentScope.path(path,document_id), body, revision)
     local data = json.decode(response.body)
     if document_id and response.status==404 then error("Update the Mac bridge to use this chat feature") end
     assert(response.status == 200, "Bridge: " .. tostring(data.error or response.status))
     if document_id then assert(data.documentId==document_id,"Document conversation mismatch; update the Mac bridge before sending") end
+    if polling and data.messages == nil then
+        assert(same_document and cached.messages and data.revision == cached.revision, "Missing conversation state")
+        data.messages = cached.messages
+    end
     return data
 end
 function KoboCodex:schedulePoll()

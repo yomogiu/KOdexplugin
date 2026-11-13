@@ -162,7 +162,10 @@ export class DiskArchives extends MemoryArchives {
   }
   async list(documentId) {
     checkId(documentId);
-    return (await this.entries(documentId)).map(metadata)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
+    const records = [];
+    for (const { name } of await this.files()) {
+      if (name.slice(0, 32) === documentId) records.push(metadata(await this.load(documentId, name.slice(33, 65))));
+    }
+    return records.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
   }
 }

@@ -197,3 +197,13 @@ test('history bounds reject the next prompt before losing archivable messages', 
   const saved = (await registry.history(A)).archives[0];
   assert.equal(saved.messageCount, 200);
 });
+
+test('disk listing extracts metadata without collecting transcript entries', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'kodex-list-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const archives = new DiskArchives(dir);
+  const saved = await archives.save(A, [{ role: 'user', text: 'Question' }, { role: 'assistant', text: 'x'.repeat(180000) }]);
+  await archives.save(B, [{ role: 'user', text: 'Other document' }]);
+  archives.entries = () => { throw new Error('Must not retain full transcripts'); };
+  assert.deepEqual(await archives.list(A), [saved]);
+});

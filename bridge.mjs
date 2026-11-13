@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash, timingSafeEqual, randomUUID } from 'node:crypto';
 import { childEnvironment, assertSafePrompt } from './security.mjs';
 import { MemoryArchives, validDocumentName } from './archives.mjs';
 
@@ -123,7 +123,7 @@ export class Chat {
     }
   }
   blocked() { this.notice = 'A tool or approval request was refused. This client cannot grant permissions.'; }
-  disconnected() { this.active = false; this.turnId = null; this.notice = 'Codex disconnected. Restart the bridge.'; }
+  disconnected() { this.updateAnswer(); this.parts.clear(); this.active = false; this.turnId = null; this.notice = 'Codex disconnected. Restart the bridge.'; }
   snapshot() {
     // The Kobo displays completed turns. Avoid repeatedly transferring and
     // decoding a growing answer that it cannot display yet. Keep the empty
@@ -138,21 +138,39 @@ export class Chat {
     if (method === 'turn/started') this.turnId = p.turn.id;
     if (method === 'item/agentMessage/delta' && this.active) {
       const key = p.itemId || 'message';
-      if (this.parts.size < 100 || this.parts.has(key)) this.parts.set(key, ((this.parts.get(key) || '') + p.delta).slice(0, MAX_OUTPUT));
-      this.updateAnswer();
+      this.storePart(key, p.delta, true);
     }
     if (method === 'item/completed' && p.item?.type === 'agentMessage' && this.active) {
-      if (this.parts.size < 100 || this.parts.has(p.item.id)) this.parts.set(p.item.id, p.item.text.slice(0, MAX_OUTPUT));
-      this.updateAnswer();
+      this.storePart(p.item.id, p.item.text);
     }
     if (method === 'turn/completed') {
+      this.updateAnswer();
       this.active = false; this.turnId = null;
       this.notice = p.turn.status === 'completed' ? '' : `Turn ${p.turn.status}.`;
       this.parts.clear();
     }
     if (method === 'error') this.notice = 'Codex reported an error. Check the computer-side login and account limits.';
   }
+  storePart(key, text, append = false) {
+    if (!this.parts.has(key) && this.parts.size >= 100) return;
+    // Keep only the prefix that can appear in the final answer, including separators.
+    let remaining = MAX_OUTPUT;
+    for (const [id, value] of this.parts) {
+      if (id === key) break;
+      remaining -= value.length + 2;
+    }
+    remaining = Math.max(0, remaining);
+    const previous = append ? (this.parts.get(key) || '') : '';
+    this.parts.set(key, previous + text.slice(0, Math.max(0, remaining - previous.length)));
+    remaining = MAX_OUTPUT;
+    for (const [id, value] of this.parts) {
+      const kept = value.slice(0, Math.max(0, remaining));
+      this.parts.set(id, kept);
+      remaining -= kept.length + 2;
+    }
+  }
   updateAnswer() {
+    if (!this.parts.size) return;
     const last = this.messages.at(-1);
     if (last?.role === 'assistant') last.text = [...this.parts.values()].join('\n\n').slice(0, MAX_OUTPUT);
   }
@@ -209,7 +227,7 @@ export class Chat {
         sandboxPolicy: { type: 'readOnly', networkAccess: false } });
       if (this.active) this.turnId = result.turn.id;
       return this.snapshot();
-    } catch (e) { this.active = false; this.notice = 'Codex could not start the reply. Check sign-in on the computer.'; this.requests.get(body.requestId).error = this.notice; throw e; }
+    } catch (e) { this.updateAnswer(); this.parts.clear(); this.active = false; this.notice = 'Codex could not start the reply. Check sign-in on the computer.'; this.requests.get(body.requestId).error = this.notice; throw e; }
   }
   async stop() {
     if (this.active && !this.turnId) throw Object.assign(new Error('Turn is starting; retry Stop shortly'), { status: 409 });
@@ -350,6 +368,7 @@ export class ChatRegistry {
 
 export function handler(chat, token, { recognizer } = {}) {
   let windowStart = Date.now(), count = 0;
+  const polls = new Map();
   return async (req, res) => {
     const reply = (status, data) => {
       if (res.destroyed) return;
@@ -370,7 +389,22 @@ export function handler(chat, token, { recognizer } = {}) {
       const path = scoped ? `/v1/${scoped[2]}` : req.url;
       const documentId = scoped ? scoped[1] : null;
       if (req.method === 'GET' && scoped && path === '/v1/history') { reply(200, await chat.history(documentId)); return; }
-      if (req.method === 'GET' && path === '/v1/state') { reply(200, chat.snapshot(documentId)); return; }
+      if (req.method === 'GET' && path === '/v1/state') {
+        const state = chat.snapshot(documentId);
+        if (typeof req.headers['x-kodex-revision'] === 'string') {
+          const previous = polls.get(documentId);
+          const same = previous && previous.messages.length === state.messages.length &&
+            previous.messages.every((m, i) => m.role === state.messages[i].role && m.text === state.messages[i].text);
+          const revision = same ? previous.revision : randomUUID();
+          if (!same) {
+            if (polls.size >= 33) polls.delete(polls.keys().next().value);
+            polls.set(documentId, { revision, messages: state.messages });
+          }
+          if (req.headers['x-kodex-revision'] === revision) delete state.messages;
+          state.revision = revision;
+        }
+        reply(200, state); return;
+      }
       if (req.method === 'GET' && path === '/v1/recognize') {
         reply(recognizer ? 200 : 503, recognizer ? recognizer.state() : { error: 'Local recognizer is unavailable' }); return;
       }

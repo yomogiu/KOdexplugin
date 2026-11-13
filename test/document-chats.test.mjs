@@ -38,7 +38,7 @@ test('documents have distinct threads, history, retry IDs, stop and reset; gener
   assert.notEqual(a.threadId, b.threadId);
   assert.equal(rpc.listenerCount('notification'), 1, 'one event router, not one listener per document');
   rpc.emit('notification', { method: 'item/agentMessage/delta', params: { threadId: a.threadId, itemId: 'answer', delta: 'Only A can see this' } });
-  assert.equal(a.messages.at(-1).text, 'Only A can see this');
+  assert.equal(a.parts.get('answer'), 'Only A can see this');
   assert.equal(b.messages.at(-1).text, '');
   assert.equal(registry.snapshot(A).messages.at(-1).text, '', 'still display completed answers only');
   await registry.stop(B);
@@ -125,9 +125,9 @@ test('real HTTPS routes enforce document isolation, scoped empty reset, auth, an
   const server = https.createServer({ key: readFileSync(join(dir, 'key')), cert: readFileSync(join(dir, 'cert')) }, handler(registry, 'test-token'));
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   t.after(() => { server.closeAllConnections(); server.close(); rmSync(dir, { recursive: true, force: true }); });
-  const request = (path, method = 'GET', body, auth = 'test-token') => new Promise((resolve, reject) => {
+  const request = (path, method = 'GET', body, auth = 'test-token', revision) => new Promise((resolve, reject) => {
     const req = https.request({ hostname: '127.0.0.1', port: server.address().port, servername: 'localhost', ca: readFileSync(join(dir, 'cert')),
-      path, method, headers: { authorization: `Bearer ${auth}`, 'content-type': 'application/json' } }, res => {
+      path, method, headers: { authorization: `Bearer ${auth}`, 'content-type': 'application/json', ...(revision ? { 'x-kodex-revision': revision } : {}) } }, res => {
       let data = ''; res.on('data', part => data += part); res.on('end', () => resolve({ status: res.statusCode, body: JSON.parse(data) }));
     }); req.on('error', reject); req.end(body === undefined ? undefined : JSON.stringify(body));
   });
@@ -141,6 +141,12 @@ test('real HTTPS routes enforce document isolation, scoped empty reset, auth, an
   assert.equal((await request(path(A, 'reset'), 'POST', {})).status, 409);
   rpc.answer(registry.chats.get(A), 'A answer');
   assert.equal((await request(path(A, 'state'))).body.messages.at(-1).text, 'A answer');
+  const full = (await request(path(A, 'state'), 'GET', undefined, 'test-token', '0')).body;
+  const compact = (await request(path(A, 'state'), 'GET', undefined, 'test-token', full.revision)).body;
+  assert.equal(compact.messages, undefined);
+  assert.equal(compact.active, false);
+  assert.equal(compact.revision, full.revision);
+  assert.deepEqual((await request(path(B, 'state'), 'GET', undefined, 'test-token', full.revision)).body.messages, []);
   assert.equal((await request(path(A, 'reset'), 'POST', { documentId: B })).status, 400);
   assert.equal((await request(path(A, 'reset'), 'POST', {})).status, 200);
   const history = await request(path(A, 'history'));

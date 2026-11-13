@@ -38,7 +38,7 @@ test('deduplicates turns, fixes sandbox settings, streams, interrupts, and filte
   assert.deepEqual(rpc.calls[1].params.sandboxPolicy, { type: 'readOnly', networkAccess: false });
   rpc.emit('notification', { method: 'item/agentMessage/delta', params: { threadId: 'other', delta: 'private' } });
   rpc.emit('notification', { method: 'item/agentMessage/delta', params: { threadId: 'thread', delta: 'Hello back' } });
-  assert.equal(chat.messages.at(-1).text, 'Hello back');
+  assert.equal(chat.messages.at(-1).text, '', 'assembly is deferred until the turn ends');
   assert.equal(chat.snapshot().messages.at(-1).text, '');
   await assert.rejects(chat.prompt({ ...prompt, requestId: 'another-request-001' }), /already/);
   await chat.stop(); assert.equal(rpc.calls.at(-1).method, 'turn/interrupt');
@@ -53,6 +53,7 @@ test('final-only messages and multiple streamed items are assembled without dupl
   rpc.emit('notification', { method: 'item/agentMessage/delta', params: { threadId: 'thread', itemId: 'a', delta: 'First' } });
   rpc.emit('notification', { method: 'item/completed', params: { threadId: 'thread', item: { type: 'agentMessage', id: 'a', text: 'First complete' } } });
   rpc.emit('notification', { method: 'item/completed', params: { threadId: 'thread', item: { type: 'agentMessage', id: 'b', text: 'Second' } } });
+  rpc.emit('notification', { method: 'turn/completed', params: { threadId: 'thread', turn: { status: 'completed' } } });
   assert.equal(chat.messages.at(-1).text, 'First complete\n\nSecond');
 });
 test('reader quotations and Unicode stay in a bounded text-only turn without file or tool RPC', async () => {
@@ -168,4 +169,18 @@ test('real HTTPS API denies bad auth, browser origins, arbitrary RPC, large bodi
   assert.equal(rpc.calls.length,before,'recognition must never start or inject a Codex turn');
   assert.equal(scans.length,1);
   assert.equal((await req('/v1/recognize',{method:'POST',body:{width:100,height:100,strokes:[[[1,1]]],url:'http://169.254.169.254/'}})).status,400);
+});
+
+test('stream storage is globally bounded and disconnect preserves the bounded prefix', async () => {
+  const rpc = new FakeRPC(), chat = new Chat(rpc, '/empty');
+  await chat.prompt(prompt);
+  for (let i = 0; i < 100; i++) chat.notify({ method: 'item/agentMessage/delta',
+    params: { threadId: 'thread', itemId: String(i), delta: 'x'.repeat(180000) } });
+  assert.ok([...chat.parts.values()].reduce((n, s) => n + s.length, 0) <= 180000);
+  assert.equal(chat.messages.at(-1).text, '');
+  chat.disconnected();
+  assert.equal(chat.snapshot().messages.at(-1).text, 'x'.repeat(180000));
+  assert.equal(chat.parts.size, 0);
+  chat.disconnected();
+  assert.equal(chat.snapshot().messages.at(-1).text.length, 180000);
 });
